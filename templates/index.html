@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI模型性能拨测系统</title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet">
+    <script src="/static/js/chart.umd.min.js"></script>
+    <style>
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 1200px;
+            margin-top: 30px;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.12);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #0056b3 0%, #003d7a 100%);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 20px;
+        }
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+        .card-body {
+            padding: 25px;
+        }
+        .nav-tabs {
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 25px;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #6c757d;
+            font-weight: 500;
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+        }
+        .nav-tabs .nav-link.active {
+            color: #0056b3;
+            border-bottom-color: #0056b3;
+            background-color: transparent;
+        }
+        .nav-tabs .nav-link:hover {
+            color: #0056b3;
+            border-bottom-color: #0056b3;
+            background-color: #f8f9fa;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px 15px;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus {
+            border-color: #0056b3;
+            box-shadow: 0 0 0 0.2rem rgba(0, 86, 179, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #0056b3 0%, #003d7a 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 25px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 86, 179, 0.4);
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+        }
+        /* JSON预览区域样式 */
+        #jsonPreviewContainer {
+            position: relative;
+        }
+        #jsonPreview {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #2c3e50;
+            max-height: 300px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        #jsonPreview:hover {
+            border-color: #0056b3;
+        }
+        #jsonEditContainer {
+            margin-top: 15px;
+        }
+        #jsonEditContainer textarea {
+            width: 100%;
+            min-height: 300px;
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #2c3e50;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+        #jsonEditContainer textarea:focus {
+            border-color: #0056b3;
+            box-shadow: 0 0 0 0.2rem rgba(0, 86, 179, 0.25);
+        }
+        #customJsonToggle {
+            margin-right: 8px;
+        }
+        .custom-json-label {
+            font-weight: 600;
+            color: #495057;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+        }
+        .custom-json-label:hover {
+            color: #0056b3;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+        }
+        .metric-card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border-left: 5px solid #0056b3;
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            background-color: #e9ecef;
+            transform: translateY(-2px);
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0056b3;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .metric-error {
+            color: #dc3545;
+            border-left-color: #dc3545;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 86, 179, 0.2);
+            border-top: 4px solid #0056b3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .alert {
+            border-radius: 8px;
+            border: none;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+        /* 多模型配置样式 */
+        #modelsContainer {
+            margin-bottom: 15px;
+        }
+        .model-config {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+        .model-config h6 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .delete-model {
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .delete-model:hover {
+            background-color: #c82333;
+        }
+        #addModelBtn {
+            padding: 8px 16px;
+            border-radius: 6px;
+        }
+        .model-config .form-group {
+            margin-bottom: 15px;
+        }
+        .model-config .form-group:last-child {
+             margin-bottom: 0;
+         }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            font-weight: 600;
+            color: #495057;
+        }
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+        .badge-success {
+            background-color: #28a745;
+        }
+        .badge-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .badge-danger {
+            background-color: #dc3545;
+        }
+        .action-btn {
+            margin: 0 5px;
+            padding: 5px 12px;
+            font-size: 14px;
+        }
+        .task-form-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 导航标签页 -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">AI模型性能拨测系统</h2>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual" type="button" role="tab" aria-controls="manual" aria-selected="true">
+                            <i class="fa fa-play-circle-o"></i> 手动测试
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="scheduled-tab" data-bs-toggle="tab" data-bs-target="#scheduled" type="button" role="tab" aria-controls="scheduled" aria-selected="false">
+                            <i class="fa fa-clock-o"></i> 计划任务
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab" aria-controls="reports" aria-selected="false">
+                            <i class="fa fa-line-chart"></i> 性能报告
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- 标签页内容 -->
+                <div class="tab-content" id="mainTabsContent">
+                    <!-- 手动测试标签页 -->
+                    <div class="tab-pane fade show active" id="manual" role="tabpanel" aria-labelledby="manual-tab">
+                        <div class="row">
+                            <!-- 左侧：模型配置表单 -->
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title">测试配置</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="testForm">
+                                            <div class="form-group mb-4">
+                                                <label for="testCount" class="form-label">测试次数</label>
+                                                <input type="number" class="form-control" id="testCount" value="10" min="1" max="100" required>
+                                            </div>
+                                             
+                                            <h6>模型配置</h6>
+                                            <div id="modelsContainer">
+                                                <!-- 模型1配置 -->
+                                                <div class="model-config border p-3 mb-3 rounded" data-model-index="0">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <h6>模型 1</h6>
+                                                        <button type="button" class="btn btn-sm btn-danger delete-model" style="display: none;">
+                                                            <i class="fa fa-trash"></i>
+                                                        </button>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="modelProvider_0" class="form-label">模型提供商</label>
+                                                <select class="form-control model-provider" id="modelProvider_0" required>
+                                                    <option value="deepseek">DeepSeek</option>
+                                                    <option value="openai">OpenAI</option>
+                                                    <option value="custom">自定义</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="modelUrl_0" class="form-label">模型URL</label>
+                                                <input type="url" class="form-control model-url" id="modelUrl_0" placeholder="https://api.example.com/v1/chat/completions" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="apiKey_0" class="form-label">API Key</label>
+                                                <input type="password" class="form-control model-api-key" id="apiKey_0" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" required>
+                                            </div>
+                                            
+                                            <!-- JSON请求预览区域 -->
+                                            <div class="json-preview-section mt-3 border-top pt-3">
+                                                <h6 class="mb-2"><i class="fa fa-code"></i> JSON请求预览</h6>
+                                                <div class="form-group">
+                                                    <div class="json-preview-container" data-model-index="0">
+                                                        <pre class="json-preview bg-light p-2 rounded border overflow-auto" style="max-height: 200px; font-size: 12px;"></pre>
+                                                    </div>
+                                                    <div class="json-edit-container" data-model-index="0" style="display: none;">
+                                                        <textarea class="json-editor form-control" rows="8" placeholder="请输入自定义JSON请求..." style="font-size: 12px;"></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="form-check mt-2">
+                                                    <input class="form-check-input custom-json-toggle" type="checkbox" data-model-index="0">
+                                                    <label class="form-check-label" for="customJsonToggle">
+                                                        使用自定义JSON请求
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                            </div>
+                                             
+                                            <!-- 添加模型按钮 -->
+                                            <div class="text-left mb-4">
+                                                <button type="button" class="btn btn-sm btn-success" id="addModelBtn">
+                                                    <i class="fa fa-plus"></i> 添加模型
+                                                </button>
+                                            </div>
+                                             
+                                            <div class="text-center">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="fa fa-play"></i> 开始测试
+                                                </button>
+                                            </div>
+                                        </form>
+                                         
+                                        <div class="loading">
+                                            <div class="spinner"></div>
+                                            <p class="mt-2">正在测试模型性能...</p>
+                                        </div>
+                                         
+                                        <div id="errorMessage" class="alert alert-danger" style="display: none; margin-top: 20px;">
+                                            <h5><i class="fa fa-exclamation-circle"></i> 测试失败</h5>
+                                            <p id="errorDetails"></p>
+                                            <p class="text-muted">请检查模型URL和API Key是否正确，确保模型服务正常运行。</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                             
+                            <!-- 右侧：测试结果 -->
+                            <div class="col-md-6">
+                                
+                                <!-- 测试结果区域 -->
+                                <div id="results" class="card" style="display: none;">
+                                    <div class="card-header">
+                                        <h5 class="card-title">测试结果</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="modelResultsContainer">
+                                            <!-- 多模型结果将通过JavaScript动态生成 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 计划任务标签页 -->
+                    <div class="tab-pane fade" id="scheduled" role="tabpanel" aria-labelledby="scheduled-tab">
+                        <div class="task-form-section">
+                            <h5><i class="fa fa-plus-circle"></i> 创建新任务</h5>
+                            <form id="taskForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="taskName" class="form-label">任务名称</label>
+                                            <input type="text" class="form-control" id="taskName" placeholder="例如：DeepSeek性能监控" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="taskInterval" class="form-label">测试间隔 (分钟)</label>
+                                            <input type="number" class="form-control" id="taskInterval" value="30" min="5" max="1440" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="taskTestCount" class="form-label">测试次数</label>
+                                            <input type="number" class="form-control" id="taskTestCount" value="5" min="1" max="50" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="taskModelProvider" class="form-label">模型提供商</label>
+                                            <select class="form-control" id="taskModelProvider" required>
+                                                <option value="deepseek">DeepSeek</option>
+                                                <option value="openai">OpenAI</option>
+                                                <option value="custom">自定义</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="form-group">
+                                            <label for="taskModelUrl" class="form-label">模型URL</label>
+                                            <input type="url" class="form-control" id="taskModelUrl" placeholder="https://api.example.com" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="taskApiKey" class="form-label">API Key</label>
+                                            <input type="password" class="form-control" id="taskApiKey" placeholder="sk-xxxxxxxx" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa fa-save"></i> 创建任务
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <h5>已创建任务</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="tasksTable">
+                                <thead>
+                                    <tr>
+                                        <th>任务名称</th>
+                                        <th>模型提供商</th>
+                                        <th>测试间隔</th>
+                                        <th>测试次数</th>
+                                        <th>状态</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tasksTableBody">
+                                    <!-- 任务列表将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 性能报告标签页 -->
+                    <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title">性能趋势图表</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label for="reportTaskSelect" class="form-label">选择任务</label>
+                                            <select class="form-control" id="reportTaskSelect">
+                                                <option value="">所有任务</option>
+                                                <!-- 任务列表将通过JavaScript动态生成 -->
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="chart-container">
+                                            <canvas id="latencyChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        let latencyChart = null;
+        
+        // 模型提供商选择事件（手动测试）
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('model-provider')) {
+                const provider = e.target.value;
+                const modelIndex = e.target.id.split('_')[1];
+                const modelUrlInput = document.getElementById(`modelUrl_${modelIndex}`);
+                
+                // 根据选择的提供商自动填充默认URL
+                if (provider === 'deepseek') {
+                    modelUrlInput.value = 'https://api.deepseek.com';
+                } else if (provider === 'openai') {
+                    modelUrlInput.value = 'https://api.openai.com';
+                } else {
+                    modelUrlInput.value = '';
+                    modelUrlInput.placeholder = 'https://api.example.com/v1/chat/completions';
+                }
+            }
+        });
+        
+        // 模型提供商选择事件（计划任务）
+        document.getElementById('taskModelProvider').addEventListener('change', function() {
+            const provider = this.value;
+            const modelUrlInput = document.getElementById('taskModelUrl');
+            
+            // 根据选择的提供商自动填充默认URL
+            if (provider === 'deepseek') {
+                modelUrlInput.value = 'https://api.deepseek.com';
+            } else if (provider === 'openai') {
+                modelUrlInput.value = 'https://api.openai.com';
+            } else {
+                modelUrlInput.value = '';
+                modelUrlInput.placeholder = 'https://api.example.com';
+            }
+        });
+        
+        // 添加模型按钮事件
+        document.getElementById('addModelBtn').addEventListener('click', function() {
+            const modelsContainer = document.getElementById('modelsContainer');
+            const modelConfigs = modelsContainer.querySelectorAll('.model-config');
+            const currentModelCount = modelConfigs.length;
+            
+            if (currentModelCount >= 5) {
+                alert('最多只能添加5个模型进行对比！');
+                return;
+            }
+            
+            const newModelIndex = currentModelCount;
+            
+            // 创建新模型配置表单
+            const newModelConfig = document.createElement('div');
+            newModelConfig.className = 'model-config border p-3 mb-3 rounded';
+            newModelConfig.setAttribute('data-model-index', newModelIndex);
+            
+            newModelConfig.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6>模型 ${newModelIndex + 1}</h6>
+                    <button type="button" class="btn btn-sm btn-danger delete-model">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label for="modelProvider_${newModelIndex}" class="form-label">模型提供商</label>
+                    <select class="form-control model-provider" id="modelProvider_${newModelIndex}" required>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modelUrl_${newModelIndex}" class="form-label">模型URL</label>
+                    <input type="url" class="form-control model-url" id="modelUrl_${newModelIndex}" placeholder="https://api.example.com/v1/chat/completions" required>
+                </div>
+                <div class="form-group">
+                    <label for="apiKey_${newModelIndex}" class="form-label">API Key</label>
+                    <input type="password" class="form-control model-api-key" id="apiKey_${newModelIndex}" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" required>
+                </div>
+            `;
+            
+            // 添加新模型配置到容器
+            modelsContainer.appendChild(newModelConfig);
+            
+            // 为新添加的删除按钮添加事件
+            newModelConfig.querySelector('.delete-model').addEventListener('click', function() {
+                newModelConfig.remove();
+                // 更新所有模型的索引和标题
+                updateModelIndices();
+            });
+            
+            // 初始化新模型的默认URL
+            document.getElementById(`modelProvider_${newModelIndex}`).dispatchEvent(new Event('change'));
+            
+            // 为新模型添加JSON预览区域
+            const jsonPreviewSection = document.createElement('div');
+            jsonPreviewSection.className = 'json-preview-section mt-3 border-top pt-3';
+            jsonPreviewSection.innerHTML = `
+                <h6 class="mb-2"><i class="fa fa-code"></i> JSON请求预览</h6>
+                <div class="form-group">
+                    <div class="json-preview-container" data-model-index="${newModelIndex}">
+                        <pre class="json-preview bg-light p-2 rounded border overflow-auto" style="max-height: 200px; font-size: 12px;"></pre>
+                    </div>
+                    <div class="json-edit-container" data-model-index="${newModelIndex}" style="display: none;">
+                        <textarea class="json-editor form-control" rows="8" placeholder="请输入自定义JSON请求..." style="font-size: 12px;"></textarea>
+                    </div>
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input custom-json-toggle" type="checkbox" data-model-index="${newModelIndex}">
+                    <label class="form-check-label" for="customJsonToggle">
+                        使用自定义JSON请求
+                    </label>
+                </div>
+            `;
+            newModelConfig.appendChild(jsonPreviewSection);
+            
+            // 为新模型的自定义JSON切换添加事件监听
+            jsonPreviewSection.querySelector('.custom-json-toggle').addEventListener('change', function() {
+                const modelIndex = this.dataset.modelIndex;
+                toggleCustomJson(modelIndex, this.checked);
+            });
+            
+            // 如果已有多个模型，显示删除按钮
+            if (modelConfigs.length >= 2) {
+                modelsContainer.querySelectorAll('.delete-model').forEach(btn => {
+                    btn.style.display = 'inline-block';
+                });
+            }
+        });
+        
+        // 删除模型功能
+        function updateModelIndices() {
+            const modelsContainer = document.getElementById('modelsContainer');
+            const modelConfigs = modelsContainer.querySelectorAll('.model-config');
+            
+            // 更新所有模型的索引和标题
+            modelConfigs.forEach((config, index) => {
+                config.setAttribute('data-model-index', index);
+                config.querySelector('h6').textContent = `模型 ${index + 1}`;
+                
+                // 更新表单元素的ID
+                const providerSelect = config.querySelector('.model-provider');
+                const urlInput = config.querySelector('.model-url');
+                const apiKeyInput = config.querySelector('.model-api-key');
+                
+                providerSelect.id = `modelProvider_${index}`;
+                providerSelect.labels[0].setAttribute('for', `modelProvider_${index}`);
+                
+                urlInput.id = `modelUrl_${index}`;
+                urlInput.labels[0].setAttribute('for', `modelUrl_${index}`);
+                
+                apiKeyInput.id = `apiKey_${index}`;
+                apiKeyInput.labels[0].setAttribute('for', `apiKey_${index}`);
+            });
+            
+    
+            
+            // 更新JSON预览
+            updateJsonPreview();
+            
+            // 如果只有一个模型，隐藏删除按钮
+            if (modelConfigs.length <= 1) {
+                modelsContainer.querySelectorAll('.delete-model').forEach(btn => {
+                    btn.style.display = 'none';
+                });
+            }
+        }
+        
+        // 为初始删除按钮添加事件
+        document.querySelectorAll('.delete-model').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const modelConfig = this.closest('.model-config');
+                modelConfig.remove();
+                updateModelIndices();
+            });
+        });
+        
+        // 初始化默认模型
+        document.querySelector('.model-provider').dispatchEvent(new Event('change'));
+        document.getElementById('taskModelProvider').dispatchEvent(new Event('change'));
+        
+        // 初始化JSON预览
+        updateJsonPreview();
+        
+        // 生成默认JSON请求格式
+        function generateDefaultJsonRequest(provider, apiKey) {
+            // 根据模型提供商生成不同的默认请求格式
+            let defaultRequest = {};
+            
+            if (provider === 'openai') {
+                defaultRequest = {
+                    "model": "gpt-3.5-turbo",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful assistant."
+                        },
+                        {
+                            "role": "user",
+                            "content": "Hello, how are you?"
+                        }
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 150
+                };
+            } else if (provider === 'deepseek') {
+                defaultRequest = {
+                    "model": "deepseek-chat",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful assistant."
+                        },
+                        {
+                            "role": "user",
+                            "content": "Hello, how are you?"
+                        }
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 150
+                };
+            } else {
+                // 默认自定义模型格式
+                defaultRequest = {
+                    "model": "your-model",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "Hello, how are you?"
+                        }
+                    ]
+                };
+            }
+            
+            return defaultRequest;
+        }
+        
+        // 更新JSON请求预览
+        function updateJsonPreview(modelIndex = null) {
+            // 如果没有指定模型索引，则更新所有模型的预览
+            if (modelIndex === null) {
+                const modelConfigs = document.querySelectorAll('.model-config');
+                modelConfigs.forEach((config, index) => {
+                    updateJsonPreviewForModel(index);
+                });
+            } else {
+                // 只更新指定模型的预览
+                updateJsonPreviewForModel(modelIndex);
+            }
+        }
+        
+        // 更新单个模型的JSON请求预览
+        function updateJsonPreviewForModel(modelIndex) {
+            const provider = document.getElementById(`modelProvider_${modelIndex}`).value;
+            const url = document.getElementById(`modelUrl_${modelIndex}`).value;
+            const apiKey = document.getElementById(`apiKey_${modelIndex}`).value;
+            
+            // 生成默认请求
+            const defaultRequest = generateDefaultJsonRequest(provider, apiKey);
+            
+            // 创建包含完整信息的请求对象
+            const fullRequest = {
+                "url": url,
+                "key": apiKey,
+                "model_provider": provider,
+                "request_body": defaultRequest
+            };
+            
+            // 显示JSON预览
+            const jsonPreview = document.querySelector(`.json-preview-container[data-model-index="${modelIndex}"] .json-preview`);
+            jsonPreview.textContent = JSON.stringify(fullRequest, null, 2);
+            
+            // 同时更新编辑器内容（如果已开启）
+            const jsonEditContainer = document.querySelector(`.json-edit-container[data-model-index="${modelIndex}"]`);
+            const jsonEditor = jsonEditContainer.querySelector('.json-editor');
+            if (jsonEditContainer.style.display !== 'none') {
+                jsonEditor.value = JSON.stringify(fullRequest, null, 2);
+            }
+        }
+        
+        // 模型配置变化时更新JSON预览
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('model-provider') || e.target.classList.contains('model-api-key') || e.target.classList.contains('model-url')) {
+                // 获取变化的模型索引
+                const modelConfig = e.target.closest('.model-config');
+                if (modelConfig) {
+                    const modelIndex = modelConfig.dataset.modelIndex;
+                    updateJsonPreview(parseInt(modelIndex));
+                }
+            }
+        });
+        
+        // 模型URL输入时更新JSON预览
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('model-url')) {
+                // 获取变化的模型索引
+                const modelConfig = e.target.closest('.model-config');
+                if (modelConfig) {
+                    const modelIndex = modelConfig.dataset.modelIndex;
+                    updateJsonPreview(parseInt(modelIndex));
+                }
+            }
+        });
+        
+        // 自定义JSON切换函数
+        function toggleCustomJson(modelIndex, isChecked) {
+            const previewContainer = document.querySelector(`.json-preview-container[data-model-index="${modelIndex}"]`);
+            const editContainer = document.querySelector(`.json-edit-container[data-model-index="${modelIndex}"]`);
+            const jsonPreview = previewContainer.querySelector('.json-preview');
+            const jsonEditor = editContainer.querySelector('.json-editor');
+            
+            if (isChecked) {
+                // 切换到编辑模式
+                previewContainer.style.display = 'none';
+                editContainer.style.display = 'block';
+                // 复制预览内容到编辑器
+                jsonEditor.value = jsonPreview.textContent;
+            } else {
+                // 切换到预览模式
+                editContainer.style.display = 'none';
+                previewContainer.style.display = 'block';
+                // 重置预览内容
+                updateJsonPreviewForModel(modelIndex);
+            }
+        }
+        
+        // 为初始模型的自定义JSON切换添加事件监听
+        document.querySelectorAll('.custom-json-toggle').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const modelIndex = this.dataset.modelIndex;
+                toggleCustomJson(modelIndex, this.checked);
+            });
+        });
+        
+        // 手动测试表单提交
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 显示加载状态
+            document.querySelector('.loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            // 获取测试次数
+            const testCount = document.getElementById('testCount').value;
+            
+            // 获取所有模型配置
+            const modelConfigs = [];
+            const modelConfigElements = document.querySelectorAll('.model-config');
+            const customJsonToggle = document.getElementById('customJsonToggle');
+            
+            modelConfigElements.forEach((config, index) => {
+                const modelProvider = config.querySelector(`#modelProvider_${index}`).value;
+                const modelUrl = config.querySelector(`#modelUrl_${index}`).value;
+                const apiKey = config.querySelector(`#apiKey_${index}`).value;
+                
+                // 检查是否启用了自定义JSON
+                let customRequest = null;
+                const customJsonToggle = config.querySelector('.custom-json-toggle');
+                if (customJsonToggle && customJsonToggle.checked) {
+                    // 获取用户自定义的JSON请求
+                    try {
+                        const jsonEditor = config.querySelector('.json-editor');
+                        const fullCustomRequest = JSON.parse(jsonEditor.value);
+                        // 提取请求体部分
+                        customRequest = fullCustomRequest.request_body;
+                    } catch (e) {
+                        alert(`模型 ${index + 1} 的自定义JSON格式错误：${e.message}`);
+                        return;
+                    }
+                }
+                
+                modelConfigs.push({
+                    model_provider: modelProvider,
+                    model_url: modelUrl,
+                    api_key: apiKey,
+                    custom_request: customRequest
+                });
+            });
+            
+            // 发送测试请求
+            fetch('/test_model', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    models: modelConfigs,
+                    test_count: parseInt(testCount)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 隐藏加载状态
+                document.querySelector('.loading').style.display = 'none';
+                
+                // 隐藏错误信息
+                document.getElementById('errorMessage').style.display = 'none';
+                
+                // 显示结果
+                document.getElementById('results').style.display = 'block';
+                
+                // 清空结果容器
+                const resultsContainer = document.getElementById('modelResultsContainer');
+                resultsContainer.innerHTML = '';
+                
+                // 检查是否是多模型结果
+                if (Array.isArray(data.results)) {
+                    // 多模型结果处理
+                    data.results.forEach((modelResult, index) => {
+                        const modelIndex = index + 1;
+                        
+                        // 创建模型结果卡片
+                        const modelResultCard = document.createElement('div');
+                        modelResultCard.className = 'mb-4';
+                        
+                        modelResultCard.innerHTML = `
+                            <div class="card border-primary mb-3">
+                                <div class="card-header">
+                                    <h6>模型 ${modelIndex} - ${modelResult.model_provider}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="metric-card">
+                                                <div class="metric-value">${modelResult.total_tests}</div>
+                                                <div class="metric-label">总测试次数</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="metric-card">
+                                                <div class="metric-value">${modelResult.success_count}</div>
+                                                <div class="metric-label">成功次数</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="metric-card">
+                                                <div class="metric-value">${modelResult.error_count}</div>
+                                                <div class="metric-label">失败次数</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="metric-card metric-error">
+                                                <div class="metric-value">${modelResult.error_rate}</div>
+                                                <div class="metric-label">错误率 (%)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <h5>性能指标</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.latency_stats.avg}</div>
+                                                    <div class="metric-label">平均延时 (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.latency_stats.p90}</div>
+                                                    <div class="metric-label">P90延时 (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.latency_stats.p99}</div>
+                                                    <div class="metric-label">P99延时 (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.latency_stats.max}</div>
+                                                    <div class="metric-label">最大延时 (ms)</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        resultsContainer.appendChild(modelResultCard);
+                    });
+                } else {
+                    // 单模型结果处理（兼容旧格式）
+                    const modelResultCard = document.createElement('div');
+                    modelResultCard.className = 'mb-4';
+                    
+                    modelResultCard.innerHTML = `
+                        <div class="card border-primary mb-3">
+                            <div class="card-header">
+                                <h6>模型 1</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <div class="metric-value">${data.total_tests}</div>
+                                            <div class="metric-label">总测试次数</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <div class="metric-value">${data.success_count}</div>
+                                            <div class="metric-label">成功次数</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <div class="metric-value">${data.error_count}</div>
+                                            <div class="metric-label">失败次数</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="metric-card metric-error">
+                                            <div class="metric-value">${data.error_rate}</div>
+                                            <div class="metric-label">错误率 (%)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h5>性能指标</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="metric-card">
+                                                <div class="metric-value">${data.latency_stats.avg}</div>
+                                                <div class="metric-label">平均延时 (ms)</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="metric-card">
+                                                <div class="metric-value">${data.latency_stats.p90}</div>
+                                                <div class="metric-label">P90延时 (ms)</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="metric-card">
+                                                <div class="metric-value">${data.latency_stats.p99}</div>
+                                                <div class="metric-label">P99延时 (ms)</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="metric-card">
+                                                <div class="metric-value">${data.latency_stats.max}</div>
+                                                <div class="metric-label">最大延时 (ms)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    resultsContainer.appendChild(modelResultCard);
+                }
+            })
+            .catch(error => {
+                // 隐藏加载状态
+                document.querySelector('.loading').style.display = 'none';
+                
+                // 显示错误信息
+                document.getElementById('errorDetails').textContent = `测试请求失败: ${error.message}`;
+                document.getElementById('errorMessage').style.display = 'block';
+            });
+        });
+        
+        // 获取任务列表
+        function loadTasks() {
+            fetch('/api/tasks')
+                .then(response => response.json())
+                .then(tasks => {
+                    const tableBody = document.getElementById('tasksTableBody');
+                    const select = document.getElementById('reportTaskSelect');
+                    
+                    // 清空现有内容
+                    tableBody.innerHTML = '';
+                    select.innerHTML = '<option value="">所有任务</option>';
+                    
+                    // 添加任务到表格
+                    tasks.forEach(task => {
+                        const row = document.createElement('tr');
+                        
+                        // 格式化时间
+                        const createdAt = new Date(task.created_at * 1000).toLocaleString();
+                        
+                        // 状态标签
+                        const statusBadge = task.is_active ? 
+                            '<span class="badge badge-success">运行中</span>' : 
+                            '<span class="badge badge-danger">已暂停</span>';
+                        
+                        row.innerHTML = `
+                            <td>${task.name}</td>
+                            <td>${task.model_provider}</td>
+                            <td>${task.interval} 分钟</td>
+                            <td>${task.test_count}</td>
+                            <td>${statusBadge}</td>
+                            <td>${createdAt}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary action-btn" onclick="toggleTask(${task.id}, ${!task.is_active})">
+                                    ${task.is_active ? '<i class="fa fa-pause"></i> 暂停' : '<i class="fa fa-play"></i> 启动'}
+                                </button>
+                                <button class="btn btn-sm btn-danger action-btn" onclick="deleteTask(${task.id})"><i class="fa fa-trash"></i> 删除</button>
+                            </td>
+                        `;
+                        
+                        tableBody.appendChild(row);
+                        
+                        // 添加任务到报告选择器
+                        const option = document.createElement('option');
+                        option.value = task.id;
+                        option.textContent = task.name;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('加载任务失败:', error));
+        }
+        
+        // 切换任务状态
+        function toggleTask(taskId, isActive) {
+            fetch(`/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ is_active: isActive })
+            })
+            .then(() => loadTasks())
+            .catch(error => console.error('更新任务状态失败:', error));
+        }
+        
+        // 删除任务
+        function deleteTask(taskId) {
+            if (confirm('确定要删除此任务吗？')) {
+                fetch(`/api/tasks/${taskId}`, {
+                    method: 'DELETE'
+                })
+                .then(() => loadTasks())
+                .catch(error => console.error('删除任务失败:', error));
+            }
+        }
+        
+        // 创建计划任务
+        document.getElementById('taskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 获取表单数据
+            const name = document.getElementById('taskName').value;
+            const modelProvider = document.getElementById('taskModelProvider').value;
+            const modelUrl = document.getElementById('taskModelUrl').value;
+            const apiKey = document.getElementById('taskApiKey').value;
+            const testCount = document.getElementById('taskTestCount').value;
+            const interval = document.getElementById('taskInterval').value;
+            
+            // 发送创建任务请求
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    model_provider: modelProvider,
+                    model_url: modelUrl,
+                    api_key: apiKey,
+                    test_count: parseInt(testCount),
+                    interval: parseInt(interval)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 重置表单
+                this.reset();
+                document.getElementById('taskModelProvider').dispatchEvent(new Event('change'));
+                
+                // 重新加载任务列表
+                loadTasks();
+                
+                // 显示成功消息
+                alert('任务创建成功！');
+            })
+            .catch(error => {
+                console.error('创建任务失败:', error);
+                alert('任务创建失败，请检查输入信息。');
+            });
+        });
+        
+        // 初始化图表
+        function initChart() {
+            const ctx = document.getElementById('latencyChart').getContext('2d');
+            latencyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '平均延时 (ms)',
+                            data: [],
+                            borderColor: '#0056b3',
+                            backgroundColor: 'rgba(0, 86, 179, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'P90延时 (ms)',
+                            data: [],
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'P99延时 (ms)',
+                            data: [],
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '延时 (毫秒)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '测试时间'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '模型性能趋势'
+                        },
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 加载图表数据
+        function loadChartData(taskId = '') {
+            let url = '/api/results';
+            if (taskId) {
+                url += `?task_id=${taskId}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(results => {
+                    if (!latencyChart) {
+                        initChart();
+                    }
+                    
+                    // 处理数据
+                    const labels = [];
+                    const avgData = [];
+                    const p90Data = [];
+                    const p99Data = [];
+                    
+                    // 按时间排序（从旧到新）
+                    results.sort((a, b) => a.test_time - b.test_time);
+                    
+                    results.forEach(result => {
+                        const date = new Date(result.test_time * 1000);
+                        labels.push(date.toLocaleTimeString());
+                        avgData.push(result.latency_stats.avg);
+                        p90Data.push(result.latency_stats.p90);
+                        p99Data.push(result.latency_stats.p99);
+                    });
+                    
+                    // 更新图表数据
+                    latencyChart.data.labels = labels;
+                    latencyChart.data.datasets[0].data = avgData;
+                    latencyChart.data.datasets[1].data = p90Data;
+                    latencyChart.data.datasets[2].data = p99Data;
+                    
+                    latencyChart.update();
+                })
+                .catch(error => console.error('加载图表数据失败:', error));
+        }
+        
+        // 任务选择变化时更新图表
+        document.getElementById('reportTaskSelect').addEventListener('change', function() {
+            loadChartData(this.value);
+        });
+        
+        // 标签页切换事件
+        const mainTabs = document.getElementById('mainTabs');
+        mainTabs.addEventListener('shown.bs.tab', function(event) {
+            const activeTab = event.target.getAttribute('aria-controls');
+            
+            // 如果切换到计划任务标签，加载任务列表
+            if (activeTab === 'scheduled') {
+                loadTasks();
+            }
+            
+            // 如果切换到报告标签，加载图表数据
+            if (activeTab === 'reports') {
+                loadChartData();
+            }
+        });
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载任务列表（用于报告选择器）
+            loadTasks();
+        });
+    </script>
+</body>
+</html>
