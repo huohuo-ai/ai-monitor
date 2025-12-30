@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import requests
 import time
 import numpy as np
 import json
 from database import db
 from scheduler import start_scheduler_thread, load_tasks
+from pdf_generator import generate_test_results_pdf
+import os
 
 app = Flask(__name__)
 
@@ -427,6 +429,36 @@ def get_all_results():
         })
     
     return jsonify(result_list)
+
+# 生成并下载PDF报告
+@app.route('/api/download_pdf', methods=['POST'])
+def download_pdf():
+    data = request.json
+    results = data.get('results')
+    
+    if not results:
+        return jsonify({'error': '没有提供测试结果'}), 400
+    
+    try:
+        # 生成PDF文件
+        pdf_filename = f'test_results_{int(time.time())}.pdf'
+        pdf_path = os.path.join(os.path.dirname(__file__), 'temp_pdfs', pdf_filename)
+        
+        # 确保临时目录存在
+        os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
+        
+        # 生成PDF
+        generate_test_results_pdf(results, pdf_path)
+        
+        # 发送文件
+        return send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name=f'AI模型性能测试报告_{time.strftime("%Y%m%d_%H%M%S")}.pdf',
+            mimetype='application/pdf'
+        )
+    except Exception as e:
+        return jsonify({'error': f'生成PDF失败: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
