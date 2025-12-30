@@ -45,6 +45,9 @@ class Database:
                 error_count INTEGER NOT NULL,
                 error_rate REAL NOT NULL,
                 latency_stats TEXT NOT NULL,  -- JSON格式保存延迟统计
+                ttft_stats TEXT,  -- JSON格式保存TTFT统计
+                tokens_throughput_stats TEXT,  -- JSON格式保存tokens吞吐统计
+                total_tokens_stats TEXT,  -- JSON格式保存总token数统计
                 FOREIGN KEY (task_id) REFERENCES tasks (id)
             )
         ''')
@@ -109,8 +112,8 @@ class Database:
         conn, cursor = self.get_connection()
         timestamp = int(time.time())
         cursor.execute('''
-            INSERT INTO test_results (task_id, test_time, total_tests, success_count, error_count, error_rate, latency_stats)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO test_results (task_id, test_time, total_tests, success_count, error_count, error_rate, latency_stats, ttft_stats, tokens_throughput_stats, total_tokens_stats)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             task_id,
             timestamp,
@@ -118,7 +121,10 @@ class Database:
             result_data['success_count'],
             result_data['error_count'],
             result_data['error_rate'],
-            json.dumps(result_data['latency_stats'])
+            json.dumps(result_data['latency_stats']),
+            json.dumps(result_data.get('ttft_stats', {})),
+            json.dumps(result_data.get('tokens_throughput_stats', {})),
+            json.dumps(result_data.get('total_tokens_stats', {}))
         ))
         conn.commit()
         last_row_id = cursor.lastrowid

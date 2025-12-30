@@ -344,6 +344,7 @@
                                                 <select class="form-control model-provider" id="modelProvider_0" required>
                                                     <option value="deepseek">DeepSeek</option>
                                                     <option value="openai">OpenAI</option>
+                                                    <option value="kimi">KIMI</option>
                                                     <option value="custom">自定义</option>
                                                 </select>
                                             </div>
@@ -456,6 +457,7 @@
                                             <select class="form-control" id="taskModelProvider" required>
                                                 <option value="deepseek">DeepSeek</option>
                                                 <option value="openai">OpenAI</option>
+                                                <option value="kimi">KIMI</option>
                                                 <option value="custom">自定义</option>
                                             </select>
                                         </div>
@@ -547,9 +549,11 @@
                 
                 // 根据选择的提供商自动填充默认URL
                 if (provider === 'deepseek') {
-                    modelUrlInput.value = 'https://api.deepseek.com';
+                    modelUrlInput.value = 'https://api.deepseek.com/v1/chat/completions';
                 } else if (provider === 'openai') {
-                    modelUrlInput.value = 'https://api.openai.com';
+                    modelUrlInput.value = 'https://api.openai.com/v1/chat/completions';
+                } else if (provider === 'kimi') {
+                    modelUrlInput.value = 'https://api.moonshot.cn/v1/chat/completions';
                 } else {
                     modelUrlInput.value = '';
                     modelUrlInput.placeholder = 'https://api.example.com/v1/chat/completions';
@@ -564,12 +568,14 @@
             
             // 根据选择的提供商自动填充默认URL
             if (provider === 'deepseek') {
-                modelUrlInput.value = 'https://api.deepseek.com';
+                modelUrlInput.value = 'https://api.deepseek.com/v1/chat/completions';
             } else if (provider === 'openai') {
-                modelUrlInput.value = 'https://api.openai.com';
+                modelUrlInput.value = 'https://api.openai.com/v1/chat/completions';
+            } else if (provider === 'kimi') {
+                modelUrlInput.value = 'https://api.moonshot.cn/v1/chat/completions';
             } else {
                 modelUrlInput.value = '';
-                modelUrlInput.placeholder = 'https://api.example.com';
+                modelUrlInput.placeholder = 'https://api.example.com/v1/chat/completions';
             }
         });
         
@@ -601,8 +607,9 @@
                 <div class="form-group">
                     <label for="modelProvider_${newModelIndex}" class="form-label">模型提供商</label>
                     <select class="form-control model-provider" id="modelProvider_${newModelIndex}" required>
-                        <option value="deepseek">DeepSeek</option>
+                        <option value="deepseek" selected>DeepSeek</option>
                         <option value="openai">OpenAI</option>
+                        <option value="kimi">KIMI</option>
                         <option value="custom">自定义</option>
                     </select>
                 </div>
@@ -626,8 +633,13 @@
                 updateModelIndices();
             });
             
-            // 初始化新模型的默认URL
-            document.getElementById(`modelProvider_${newModelIndex}`).dispatchEvent(new Event('change'));
+            // 初始化新模型的默认URL（使用setTimeout确保DOM完全渲染）
+            setTimeout(() => {
+                const providerSelect = document.getElementById(`modelProvider_${newModelIndex}`);
+                if (providerSelect) {
+                    providerSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }, 10);
             
             // 为新模型添加JSON预览区域
             const jsonPreviewSection = document.createElement('div');
@@ -738,7 +750,8 @@
                         }
                     ],
                     "temperature": 0.7,
-                    "max_tokens": 150
+                    "max_tokens": 150,
+                    "stream": true
                 };
             } else if (provider === 'deepseek') {
                 defaultRequest = {
@@ -754,7 +767,25 @@
                         }
                     ],
                     "temperature": 0.7,
-                    "max_tokens": 150
+                    "max_tokens": 150,
+                    "stream": true
+                };
+            } else if (provider === 'kimi') {
+                defaultRequest = {
+                    "model": "kimi-k2-turbo-preview",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful assistant."
+                        },
+                        {
+                            "role": "user",
+                            "content": "Hello, how are you?"
+                        }
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 150,
+                    "stream": true
                 };
             } else {
                 // 默认自定义模型格式
@@ -943,6 +974,48 @@
                 // 检查是否是多模型结果
                 if (Array.isArray(data.results)) {
                     // 多模型结果处理
+                    
+                    // 创建对比表格
+                    const comparisonTable = document.createElement('div');
+                    comparisonTable.className = 'card mb-4';
+                    comparisonTable.innerHTML = `
+                        <div class="card-header">
+                            <h6>模型性能对比</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>模型</th>
+                                            <th>TTFT P90 (ms)</th>
+                                            <th>Token吞吐 (tokens/s)</th>
+                                            <th>成功率 (%)</th>
+                                            <th>请求性能最大值 (ms)</th>
+                                            <th>请求性能P99 (ms)</th>
+                                            <th>请求性能最小值 (ms)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.results.map((modelResult, index) => `
+                                            <tr>
+                                                <td><strong>${modelResult.model_provider}</strong></td>
+                                                <td>${modelResult.ttft_stats.p90 || 0}</td>
+                                                <td>${modelResult.tokens_throughput_stats.avg || 0}</td>
+                                                <td>${(100 - modelResult.error_rate).toFixed(2)}%</td>
+                                                <td>${modelResult.latency_stats.max}</td>
+                                                <td>${modelResult.latency_stats.p99}</td>
+                                                <td>${modelResult.latency_stats.min}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    resultsContainer.appendChild(comparisonTable);
+                    
+                    // 显示每个模型的详细结果
                     data.results.forEach((modelResult, index) => {
                         const modelIndex = index + 1;
                         
@@ -1008,6 +1081,66 @@
                                                 <div class="metric-card">
                                                     <div class="metric-value">${modelResult.latency_stats.max}</div>
                                                     <div class="metric-label">最大延时 (ms)</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <h5>TTFT指标 (Time to First Token)</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.ttft_stats.avg || 0}</div>
+                                                    <div class="metric-label">平均TTFT (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.ttft_stats.p90 || 0}</div>
+                                                    <div class="metric-label">P90 TTFT (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.ttft_stats.p99 || 0}</div>
+                                                    <div class="metric-label">P99 TTFT (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.ttft_stats.min || 0}</div>
+                                                    <div class="metric-label">最小TTFT (ms)</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <h5>Tokens吞吐指标</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.tokens_throughput_stats.avg || 0}</div>
+                                                    <div class="metric-label">平均吞吐 (tokens/s)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.tokens_throughput_stats.p90 || 0}</div>
+                                                    <div class="metric-label">P90吞吐 (tokens/s)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.tokens_throughput_stats.max || 0}</div>
+                                                    <div class="metric-label">最大吞吐 (tokens/s)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${modelResult.total_tokens_stats.avg || 0}</div>
+                                                    <div class="metric-label">平均Token数</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1081,6 +1214,66 @@
                                             <div class="metric-card">
                                                 <div class="metric-value">${data.latency_stats.max}</div>
                                                 <div class="metric-label">最大延时 (ms)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <h5>TTFT指标 (Time to First Token)</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${data.ttft_stats.avg || 0}</div>
+                                                    <div class="metric-label">平均TTFT (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${data.ttft_stats.p90 || 0}</div>
+                                                    <div class="metric-label">P90 TTFT (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${data.ttft_stats.p99 || 0}</div>
+                                                    <div class="metric-label">P99 TTFT (ms)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${data.ttft_stats.min || 0}</div>
+                                                    <div class="metric-label">最小TTFT (ms)</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <h5>Tokens吞吐指标</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${data.tokens_throughput_stats.avg || 0}</div>
+                                                    <div class="metric-label">平均吞吐 (tokens/s)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${data.tokens_throughput_stats.p90 || 0}</div>
+                                                    <div class="metric-label">P90吞吐 (tokens/s)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${data.tokens_throughput_stats.max || 0}</div>
+                                                    <div class="metric-label">最大吞吐 (tokens/s)</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value">${data.total_tokens_stats.avg || 0}</div>
+                                                    <div class="metric-label">平均Token数</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1253,6 +1446,24 @@
                             backgroundColor: 'rgba(220, 53, 69, 0.1)',
                             tension: 0.3,
                             fill: true
+                        },
+                        {
+                            label: '平均TTFT (ms)',
+                            data: [],
+                            borderColor: '#fd7e14',
+                            backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                            tension: 0.3,
+                            fill: true,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: '平均Token吞吐 (tokens/s)',
+                            data: [],
+                            borderColor: '#6f42c1',
+                            backgroundColor: 'rgba(111, 66, 193, 0.1)',
+                            tension: 0.3,
+                            fill: true,
+                            borderDash: [2, 2]
                         }
                     ]
                 },
@@ -1264,7 +1475,7 @@
                             beginAtZero: true,
                             title: {
                                 display: true,
-                                text: '延时 (毫秒)'
+                                text: '指标值'
                             }
                         },
                         x: {
@@ -1310,6 +1521,8 @@
                     const avgData = [];
                     const p90Data = [];
                     const p99Data = [];
+                    const ttftData = [];
+                    const throughputData = [];
                     
                     // 按时间排序（从旧到新）
                     results.sort((a, b) => a.test_time - b.test_time);
@@ -1320,13 +1533,16 @@
                         avgData.push(result.latency_stats.avg);
                         p90Data.push(result.latency_stats.p90);
                         p99Data.push(result.latency_stats.p99);
+                        ttftData.push(result.ttft_stats ? result.ttft_stats.avg : 0);
+                        throughputData.push(result.tokens_throughput_stats ? result.tokens_throughput_stats.avg : 0);
                     });
                     
-                    // 更新图表数据
                     latencyChart.data.labels = labels;
                     latencyChart.data.datasets[0].data = avgData;
                     latencyChart.data.datasets[1].data = p90Data;
                     latencyChart.data.datasets[2].data = p99Data;
+                    latencyChart.data.datasets[3].data = ttftData;
+                    latencyChart.data.datasets[4].data = throughputData;
                     
                     latencyChart.update();
                 })
@@ -1356,6 +1572,15 @@
         
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 设置DeepSeek默认URL
+            const modelUrlInput = document.getElementById('modelUrl_0');
+            if (modelUrlInput && !modelUrlInput.value) {
+                modelUrlInput.value = 'https://api.deepseek.com/v1/chat/completions';
+            }
+            
+            // 触发一次change事件以更新JSON预览
+            document.querySelector('.model-provider').dispatchEvent(new Event('change'));
+            
             // 加载任务列表（用于报告选择器）
             loadTasks();
         });
