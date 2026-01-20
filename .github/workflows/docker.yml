@@ -1,0 +1,36 @@
+name: Docker Build and Push
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Alibaba Cloud Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: registry.cn-qingdao.aliyuncs.com
+        username: ${{ secrets.ALIYUN_DOCKER_USERNAME }}
+        password: ${{ secrets.ALIYUN_DOCKER_PASSWORD }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: |
+          registry.cn-qingdao.aliyuncs.com/huaqiangk8s/ai-monitor:latest
+          registry.cn-qingdao.aliyuncs.com/huaqiangk8s/ai-monitor:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
