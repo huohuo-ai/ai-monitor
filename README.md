@@ -1,87 +1,65 @@
 # AI模型性能拨测系统
 
-一个基于Flask的AI模型性能监控和拨测工具，支持多种AI模型提供商的实时性能测试、定时任务管理和可视化报告。
+一个基于 Flask 的 AI 模型性能测试工具，支持用户注册登录、模型性能测试、历史记录保存和分享功能。
 
 ## 功能特性
 
-### 手动测试
-- 支持单模型或多模型同时测试
-- 支持多种AI模型提供商：
+### 用户系统
+- 邮箱验证码注册/登录
+- 注册用户每日 10 次测试额度
+- 非注册用户每日 3 次测试额度
+
+### 模型测试
+- 支持多种 AI 模型提供商：
   - DeepSeek
   - OpenAI
+  - Kimi
   - Anthropic
   - 自定义模型
-- 自定义JSON请求格式
-- 实时性能指标统计
+- 多模型同时测试对比
+- API Key 由前端直接请求模型厂商，**后端不存储 API Key**
 
-### 计划任务
-- 创建定时测试任务
-- 灵活的测试间隔设置（5分钟-1440分钟）
-- 任务管理（创建、编辑、删除）
-- 自动执行并保存测试结果
-
-### 性能报告
-- 可视化图表展示
-- 历史数据查询
-- 多维度性能指标分析
-
-## 性能指标
-
-系统提供以下性能指标：
+### 性能指标
 - **平均延迟** (Avg Latency)
-- **P90延迟** (90th Percentile)
-- **P99延迟** (99th Percentile)
-- **最小延迟** (Min Latency)
-- **最大延迟** (Max Latency)
+- **P90/P99 延迟** (Percentile Latency)
+- **TTFT** (Time to First Token)
+- **Token 吞吐** (Tokens/Second)
 - **错误率** (Error Rate)
-- **成功次数** (Success Count)
-- **失败次数** (Error Count)
+
+### 历史与分享
+- 测试历史长期保存
+- 生成分享链接，可通过 URL 分享测试结果
 
 ## 技术栈
 
 - **后端框架**: Flask
 - **数据库**: SQLite
 - **前端框架**: Bootstrap 5
-- **图表库**: Chart.js
-- **任务调度**: schedule
-- **HTTP客户端**: requests
-- **数据处理**: numpy
-
-## 项目结构
-
-```
-ai-monitor/
-├── app.py              # Flask应用主文件
-├── database.py         # 数据库操作类
-├── scheduler.py        # 任务调度器
-├── requirements.txt    # Python依赖
-├── ai_monitor.db      # SQLite数据库文件
-├── templates/
-│   └── index.html     # 前端界面
-├── static/
-│   ├── css/           # 样式文件
-│   ├── js/            # JavaScript文件
-│   └── fonts/         # 字体文件
-└── README.md          # 项目文档
-```
+- **任务调度**: 前端 JavaScript
 
 ## 安装部署
 
 ### 环境要求
-- Python 3.6+
+- Python 3.9+
 - pip
 
 ### 安装步骤
 
-1. 克隆项目
-```bash
-cd ai-monitor
-```
-
-2. 安装依赖
+1. 安装依赖
 ```bash
 pip install -r requirements.txt
 ```
+
+2. 配置邮件服务（可选）
+```bash
+export SMTP_SERVER=smtp.gmail.com
+export SMTP_PORT=587
+export SMTP_USERNAME=your_email@gmail.com
+export SMTP_PASSWORD=your_app_password
+export FROM_EMAIL=your_email@gmail.com
+```
+
+如果不配置邮件服务，系统将使用模拟模式，验证码将显示在控制台日志中。
 
 3. 启动应用
 ```bash
@@ -91,77 +69,64 @@ python app.py
 4. 访问系统
 打开浏览器访问: http://localhost:5001
 
-## API接口
+### Docker 部署
 
-### 手动测试
-- **POST** `/test_model`
-  - 请求体: `{"model_provider": "deepseek", "model_url": "...", "api_key": "...", "test_count": 10}`
-  - 响应: 性能测试结果
+```bash
+docker build -t ai-monitor .
+docker run -p 5001:5001 -e SMTP_USERNAME=xxx -e SMTP_PASSWORD=xxx ai-monitor
+```
 
-### 计划任务管理
-- **GET** `/api/tasks` - 获取所有任务
-- **POST** `/api/tasks` - 创建新任务
-- **PUT** `/api/tasks/<id>` - 更新任务
-- **DELETE** `/api/tasks/<id>` - 删除任务
-- **GET** `/api/tasks/<id>/results` - 获取任务测试结果
+## API 接口
 
-### 测试结果
-- **GET** `/api/results` - 获取所有测试结果
-- **GET** `/api/results?task_id=<id>` - 获取指定任务的测试结果
+### 用户认证
+- **POST** `/api/auth/send-code` - 发送验证码
+- **POST** `/api/auth/register` - 注册/登录
+- **POST** `/api/auth/logout` - 退出登录
+- **GET** `/api/auth/me` - 获取当前用户信息
+
+### 测试
+- **GET** `/api/test/limit` - 获取测试限制信息
+- **POST** `/api/test/submit` - 提交测试结果
+- **GET** `/api/test/history` - 获取测试历史（需登录）
+- **GET** `/api/test/share/<token>` - 获取分享的测试结果
 
 ## 数据库结构
 
-### tasks表
-- id: 任务ID
-- name: 任务名称
-- model_provider: 模型提供商
-- model_url: 模型API地址
-- api_key: API密钥
-- test_count: 测试次数
-- interval: 测试间隔（分钟）
-- is_active: 是否激活
+### users 表
+- id: 用户ID
+- email: 邮箱地址
 - created_at: 创建时间
-- updated_at: 更新时间
+- last_login: 最后登录时间
 
-### test_results表
-- id: 结果ID
-- task_id: 关联任务ID
-- test_time: 测试时间
-- total_tests: 总测试次数
-- success_count: 成功次数
-- error_count: 失败次数
-- error_rate: 错误率
-- latency_stats: 延迟统计（JSON格式）
+### test_records 表
+- id: 记录ID
+- user_id: 用户ID（可为空，表示匿名用户）
+- ip: 用户IP（匿名用户使用）
+- test_date: 测试日期
+- test_count: 测试次数
+- models_count: 模型数量
+- results: 测试结果（JSON）
+- created_at: 创建时间
+
+### share_tokens 表
+- id: 记录ID
+- record_id: 关联的测试记录ID
+- token: 分享 token
+- created_at: 创建时间
+- expires_at: 过期时间
+
+## 安全说明
+
+1. **API Key 安全**: 用户的 API Key 仅在前端使用，直接请求模型厂商服务器，**不会发送到后端服务器**。
+2. **验证码**: 验证码 5 分钟有效，只能使用一次。
+3. **分享链接**: 分享链接长期有效，包含随机生成的 token。
 
 ## 使用说明
 
-### 手动测试
-1. 在"手动测试"标签页配置模型参数
-2. 选择模型提供商或使用自定义模型
-3. 输入模型URL和API Key
-4. 设置测试次数
-5. 点击"开始测试"按钮
-6. 查看实时测试结果
-
-### 创建计划任务
-1. 在"计划任务"标签页填写任务信息
-2. 设置任务名称、测试间隔、测试次数
-3. 配置模型参数
-4. 点击"创建任务"
-5. 系统将自动按设定间隔执行测试
-
-### 查看性能报告
-1. 在"性能报告"标签页选择任务
-2. 查看历史测试数据
-3. 分析性能趋势
-
-## 注意事项
-
-- API Key请妥善保管，不要泄露
-- 测试间隔建议不低于5分钟
-- 数据库文件会自动创建，无需手动配置
-- 调度器线程在应用启动时自动启动
-- 修改任务后会自动重新加载调度器
+1. 在首页配置模型参数（API 地址和 Key）
+2. 点击"开始测试"执行测试
+3. 测试完成后点击"保存结果"生成分享链接
+4. 登录后可查看历史记录
 
 ## 许可证
 

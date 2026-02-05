@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分享的测试结果 - AI模型性能拨测系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #0056b3;
+        }
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #0056b3 0%, #003d7a 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background: linear-gradient(90deg, #0056b3 0%, #003d7a 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            font-weight: 600;
+        }
+        .result-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #0056b3;
+        }
+        .metric-box {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 5px;
+        }
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0056b3;
+        }
+        .metric-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        .share-banner {
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .comparison-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .comparison-table th {
+            background: #0056b3;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-speedometer2 me-2"></i>AI模型性能拨测系统
+            </a>
+            <div>
+                <a href="/" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-house me-1"></i>首页
+                </a>
+                <a href="/history" class="btn btn-light btn-sm">
+                    <i class="bi bi-clock-history me-1"></i>我的历史
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <!-- 分享标识 -->
+        <div class="text-center">
+            <div class="share-banner">
+                <i class="bi bi-share-fill me-2"></i>
+                分享的测试结果
+            </div>
+        </div>
+
+        <div id="contentContainer">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-3 text-muted">加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部信息 -->
+    <footer class="text-center text-muted py-4">
+        <p class="mb-0">
+            <i class="bi bi-shield-check me-1"></i>
+            由 AI模型性能拨测系统 生成
+            <a href="/" class="text-decoration-none ms-2">我也要测试</a>
+        </p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const shareToken = '{{ share_token }}';
+            loadSharedResult(shareToken);
+        });
+
+        async function loadSharedResult(token) {
+            const container = document.getElementById('contentContainer');
+            
+            try {
+                const response = await fetch(`/api/test/share/${token}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    container.innerHTML = `
+                        <div class="card">
+                            <div class="card-body text-center py-5">
+                                <i class="bi bi-exclamation-circle text-danger" style="font-size: 4rem;"></i>
+                                <h4 class="mt-3 text-muted">链接无效或已过期</h4>
+                                <p class="text-muted">该分享链接可能已被删除或已过期</p>
+                                <a href="/" class="btn btn-primary mt-2">
+                                    <i class="bi bi-house me-2"></i>返回首页
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                renderResult(data.data);
+                
+            } catch (error) {
+                console.error('加载分享结果失败:', error);
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3 text-muted">加载失败</h4>
+                            <p class="text-muted">请检查网络连接后重试</p>
+                            <button class="btn btn-primary mt-2" onclick="location.reload()">
+                                <i class="bi bi-arrow-clockwise me-2"></i>重试
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderResult(data) {
+            const container = document.getElementById('contentContainer');
+            const results = data.results;
+            const testTime = new Date(data.created_at * 1000).toLocaleString('zh-CN');
+            
+            let html = `
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-info-circle me-2"></i>测试信息
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>测试时间：</strong>${testTime}</p>
+                                <p class="mb-1"><strong>测试次数：</strong>${data.test_count} 次/模型</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>测试模型：</strong></p>
+                                <div>
+                                    ${results.map(r => `<span class="badge bg-primary me-1">${r.model_provider}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 如果有多个模型，显示对比表格
+            if (results.length > 1) {
+                html += `
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-bar-chart me-2"></i>模型对比
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover comparison-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>模型</th>
+                                            <th>平均延迟</th>
+                                            <th>延迟 P90</th>
+                                            <th>TTFT P90</th>
+                                            <th>Token吞吐</th>
+                                            <th>成功率</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${results.map(r => `
+                                            <tr>
+                                                <td><strong>${r.model_provider}</strong></td>
+                                                <td>${r.latency_stats.avg}ms</td>
+                                                <td>${r.latency_stats.p90}ms</td>
+                                                <td>${r.ttft_stats.p90}ms</td>
+                                                <td>${r.tokens_throughput_stats.avg.toFixed(1)}/s</td>
+                                                <td>
+                                                    <span class="badge bg-${r.error_rate === 0 ? 'success' : r.error_rate < 10 ? 'warning' : 'danger'}">
+                                                        ${(100 - r.error_rate).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示每个模型的详细结果
+            html += `
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-graph-up me-2"></i>详细结果
+                    </div>
+                    <div class="card-body">
+            `;
+            
+            results.forEach(result => {
+                html += `
+                    <div class="result-card">
+                        <h5 class="mb-3">
+                            <span class="badge bg-primary">${result.model_provider}</span>
+                            <small class="text-muted ms-2">${result.success_count}/${result.total_tests} 成功</small>
+                        </h5>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-md-3">
+                                <div class="metric-box">
+                                    <div class="metric-value">${result.latency_stats.avg}</div>
+                                    <div class="metric-label">平均延迟(ms)</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="metric-box">
+                                    <div class="metric-value">${result.ttft_stats.avg}</div>
+                                    <div class="metric-label">平均TTFT(ms)</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="metric-box">
+                                    <div class="metric-value">${result.tokens_throughput_stats.avg.toFixed(1)}</div>
+                                    <div class="metric-label">Token吞吐(/s)</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="metric-box">
+                                    <div class="metric-value">${result.total_tokens_stats.avg.toFixed(0)}</div>
+                                    <div class="metric-label">平均Token数</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body py-2">
+                                        <h6 class="card-title text-muted mb-2">延迟指标 (ms)</h6>
+                                        <div class="row text-center small">
+                                            <div class="col-6">
+                                                <div class="text-primary fw-bold">${result.latency_stats.p90}</div>
+                                                <div class="text-muted">P90</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="text-primary fw-bold">${result.latency_stats.p99}</div>
+                                                <div class="text-muted">P99</div>
+                                            </div>
+                                            <div class="col-6 mt-2">
+                                                <div class="text-success fw-bold">${result.latency_stats.min}</div>
+                                                <div class="text-muted">最小值</div>
+                                            </div>
+                                            <div class="col-6 mt-2">
+                                                <div class="text-danger fw-bold">${result.latency_stats.max}</div>
+                                                <div class="text-muted">最大值</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body py-2">
+                                        <h6 class="card-title text-muted mb-2">TTFT指标 (ms)</h6>
+                                        <div class="row text-center small">
+                                            <div class="col-6">
+                                                <div class="text-primary fw-bold">${result.ttft_stats.p90}</div>
+                                                <div class="text-muted">P90</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="text-primary fw-bold">${result.ttft_stats.p99}</div>
+                                                <div class="text-muted">P99</div>
+                                            </div>
+                                            <div class="col-6 mt-2">
+                                                <div class="text-success fw-bold">${result.ttft_stats.min}</div>
+                                                <div class="text-muted">最小值</div>
+                                            </div>
+                                            <div class="col-6 mt-2">
+                                                <div class="text-danger fw-bold">${result.ttft_stats.max}</div>
+                                                <div class="text-muted">最大值</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body py-2">
+                                        <h6 class="card-title text-muted mb-2">Token吞吐 (/s)</h6>
+                                        <div class="row text-center small">
+                                            <div class="col-6">
+                                                <div class="text-primary fw-bold">${result.tokens_throughput_stats.p90.toFixed(1)}</div>
+                                                <div class="text-muted">P90</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="text-primary fw-bold">${result.tokens_throughput_stats.p99.toFixed(1)}</div>
+                                                <div class="text-muted">P99</div>
+                                            </div>
+                                            <div class="col-6 mt-2">
+                                                <div class="text-success fw-bold">${result.tokens_throughput_stats.min.toFixed(1)}</div>
+                                                <div class="text-muted">最小值</div>
+                                            </div>
+                                            <div class="col-6 mt-2">
+                                                <div class="text-danger fw-bold">${result.tokens_throughput_stats.max.toFixed(1)}</div>
+                                                <div class="text-muted">最大值</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 text-center">
+                            <span class="badge bg-${result.error_rate === 0 ? 'success' : result.error_rate < 10 ? 'warning' : 'danger'}">
+                                <i class="bi bi-${result.error_rate === 0 ? 'check-circle' : result.error_rate < 10 ? 'exclamation-triangle' : 'x-circle'} me-1"></i>
+                                错误率: ${result.error_rate}%
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
