@@ -1,0 +1,185 @@
+{# 广告位组件 - 可通过 config.py 的 AD_CONFIG 配置 #}
+{% if ad_config and ad_config.enabled %}
+<div class="card mt-4 ad-widget">
+    <div class="card-header ad-header">
+        <i class="bi bi-megaphone me-2"></i>{{ ad_config.title }}
+    </div>
+    <div class="card-body p-0">
+        <div class="ad-list">
+            {% for ad in ad_config.ads %}
+            <a href="{{ ad.url }}" target="_blank" rel="noopener" class="ad-item">
+                <div class="ad-icon">
+                    <i class="bi {{ ad.icon }}"></i>
+                </div>
+                <div class="ad-content">
+                    <div class="ad-title">
+                        {{ ad.name }}
+                        {% if ad.badge %}
+                        <span class="badge bg-{{ ad.badge_color }} ms-1">{{ ad.badge }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="ad-desc">{{ ad.desc }}</div>
+                </div>
+                <div class="ad-arrow">
+                    <i class="bi bi-chevron-right"></i>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="card-footer ad-footer">
+        <small class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            以上服务由第三方提供，与本平台无关
+        </small>
+    </div>
+</div>
+
+<style>
+/* 广告位样式 */
+.ad-widget {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.ad-widget:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+.ad-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 12px 16px;
+    border-radius: 12px 12px 0 0 !important;
+    font-size: 0.9rem;
+}
+
+.ad-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.ad-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+}
+
+.ad-item:last-child {
+    border-bottom: none;
+}
+
+.ad-item:hover {
+    background-color: #f8f9ff;
+    text-decoration: none;
+    color: inherit;
+}
+
+.ad-item:hover .ad-arrow {
+    transform: translateX(3px);
+    color: #667eea;
+}
+
+.ad-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.ad-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.ad-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+}
+
+.ad-desc {
+    font-size: 0.8rem;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ad-arrow {
+    color: #ccc;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.ad-footer {
+    background: #f8f9fa;
+    padding: 10px 16px;
+    text-align: center;
+    border-radius: 0 0 12px 12px;
+}
+
+/* 小徽章样式 */
+.ad-title .badge {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .ad-item {
+        padding: 12px;
+    }
+    
+    .ad-icon {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        font-size: 1rem;
+    }
+    
+    .ad-title {
+        font-size: 0.9rem;
+    }
+    
+    .ad-desc {
+        font-size: 0.75rem;
+    }
+}
+
+/* 动画效果 */
+@keyframes ad-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ad-widget {
+    animation: ad-slide-in 0.5s ease;
+}
+</style>
+{% endif %}

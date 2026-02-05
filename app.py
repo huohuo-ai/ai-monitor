@@ -8,6 +8,7 @@ import re
 
 from database import db
 from email_service import send_verification_email
+from config import AD_CONFIG
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -49,7 +50,7 @@ def check_test_limit(user_id=None, ip=None):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', ad_config=AD_CONFIG)
 
 @app.route('/history')
 def history():
