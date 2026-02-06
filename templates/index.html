@@ -581,6 +581,10 @@
             `;
             
             container.appendChild(card);
+            
+            // 自动填充默认 URL
+            const select = card.querySelector('.model-provider');
+            updateModelUrl(select);
         }
 
         function removeModelCard(btn) {
