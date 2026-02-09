@@ -64,9 +64,9 @@ def share_result(share_token):
     return render_template('share.html', share_token=share_token)
 
 @app.route('/MP_verify_AMrCKwIdXXvYtY53.txt')
-def share_result(share_token):
-    """分享结果页面"""
-    return render_template('MP_verify_AMrCKwIdXXvYtY53.txt', share_token=share_token)
+def mp_verify():
+    """微信验证"""
+    return render_template('MP_verify_AMrCKwIdXXvYtY53.txt')
 
 # ============ 用户认证 API ============
 
