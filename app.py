@@ -63,6 +63,11 @@ def share_result(share_token):
     """分享结果页面"""
     return render_template('share.html', share_token=share_token)
 
+@app.route('/MP_verify_AMrCKwIdXXvYtY53.txt')
+def share_result(share_token):
+    """分享结果页面"""
+    return render_template('MP_verify_AMrCKwIdXXvYtY53.txt', share_token=share_token)
+
 # ============ 用户认证 API ============
 
 @app.route('/api/auth/send-code', methods=['POST'])
