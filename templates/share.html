@@ -367,6 +367,27 @@
                                 错误率: ${result.error_rate}%
                             </span>
                         </div>
+                        
+                        ${result.rps_result ? `
+                        <div class="mt-3 pt-3 border-top">
+                            <h6 class="mb-2"><i class="bi bi-speedometer2 me-2 text-primary"></i>RPS 压力测试</h6>
+                            
+                            <div class="alert ${result.rps_result.criticalIndex > 0 ? 'alert-warning' : 'alert-success'} mb-2">
+                                <i class="bi bi-${result.rps_result.criticalIndex > 0 ? 'exclamation-triangle' : 'check-circle'} me-2"></i>
+                                ${result.rps_result.message}
+                            </div>
+                            
+                            <div class="row small text-muted mb-2">
+                                <div class="col-4">基线TTFT: ${result.rps_result.baseline}ms</div>
+                                <div class="col-4">阈值(150%): ${result.rps_result.threshold}ms</div>
+                                <div class="col-4">总请求数: ${result.total_tests}</div>
+                            </div>
+                            
+                            <div class="rps-chart-container" style="height: 180px; position: relative;">
+                                <canvas id="rpsChart-${result.model_provider}"></canvas>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 `;
             });
@@ -377,6 +398,199 @@
             `;
             
             container.innerHTML = html;
+            
+            // 渲染 RPS 图表
+            results.forEach(result => {
+                if (result.rps_result) {
+                    renderRPSChart(`rpsChart-${result.model_provider}`, result.rps_result);
+                }
+            });
+        }
+        
+        // 渲染 RPS 时间轴图表
+        function renderRPSChart(canvasId, rpsData) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const container = canvas.parentElement;
+            
+            // 设置 canvas 尺寸
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+            
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+            
+            // 清空画布
+            ctx.clearRect(0, 0, width, height);
+            
+            // 获取数据
+            const timeline = rpsData.timeline;
+            const validData = timeline.filter(d => !d.error && d.ttft !== null);
+            
+            if (validData.length === 0) return;
+            
+            // 计算范围
+            const maxTTFT = Math.max(...validData.map(d => d.ttft), rpsData.threshold * 1.2);
+            const minTTFT = 0;
+            
+            // 绘制网格线
+            ctx.strokeStyle = '#e9ecef';
+            ctx.lineWidth = 1;
+            
+            // 横向网格
+            for (let i = 0; i <= 4; i++) {
+                const y = padding.top + (chartHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+                
+                // Y轴标签
+                const value = maxTTFT - (maxTTFT / 4) * i;
+                ctx.fillStyle = '#6c757d';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(value.toFixed(0) + 'ms', padding.left - 5, y + 3);
+            }
+            
+            // 绘制阈值线
+            if (rpsData.threshold > 0) {
+                const thresholdY = padding.top + chartHeight * (1 - rpsData.threshold / maxTTFT);
+                ctx.strokeStyle = '#dc3545';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(padding.left, thresholdY);
+                ctx.lineTo(width - padding.right, thresholdY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // 阈值标签
+                ctx.fillStyle = '#dc3545';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('阈值(150%)', width - padding.right - 60, thresholdY - 5);
+            }
+            
+            // 绘制数据点和连线
+            const xStep = chartWidth / (timeline.length - 1 || 1);
+            
+            // 绘制连线
+            ctx.strokeStyle = '#0056b3';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            let firstPoint = true;
+            timeline.forEach((d, i) => {
+                if (d.error || d.ttft === null) return;
+                
+                const x = padding.left + i * xStep;
+                const y = padding.top + chartHeight * (1 - d.ttft / maxTTFT);
+                
+                if (firstPoint) {
+                    ctx.moveTo(x, y);
+                    firstPoint = false;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+            
+            // 绘制数据点
+            timeline.forEach((d, i) => {
+                const x = padding.left + i * xStep;
+                
+                if (d.error) {
+                    // 错误点 - 红色 X
+                    ctx.strokeStyle = '#dc3545';
+                    ctx.lineWidth = 2;
+                    const size = 6;
+                    ctx.beginPath();
+                    ctx.moveTo(x - size, padding.top + chartHeight / 2 - size);
+                    ctx.lineTo(x + size, padding.top + chartHeight / 2 + size);
+                    ctx.moveTo(x + size, padding.top + chartHeight / 2 - size);
+                    ctx.lineTo(x - size, padding.top + chartHeight / 2 + size);
+                    ctx.stroke();
+                } else if (d.ttft !== null) {
+                    const y = padding.top + chartHeight * (1 - d.ttft / maxTTFT);
+                    
+                    // 判断是否为临界点
+                    const isCritical = rpsData.criticalIndex === i;
+                    
+                    // 绘制点
+                    ctx.beginPath();
+                    ctx.arc(x, y, isCritical ? 6 : 4, 0, Math.PI * 2);
+                    ctx.fillStyle = isCritical ? '#dc3545' : (d.ttft > rpsData.threshold ? '#ffc107' : '#0056b3');
+                    ctx.fill();
+                    
+                    // 临界点标记
+                    if (isCritical) {
+                        ctx.strokeStyle = '#dc3545';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 10, 0, Math.PI * 2);
+                        ctx.stroke();
+                        
+                        // 标签
+                        ctx.fillStyle = '#dc3545';
+                        ctx.font = 'bold 11px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('临界点', x, y - 15);
+                    }
+                }
+                
+                // X轴标签（每5个显示一次）
+                if (i % 5 === 0 || i === timeline.length - 1) {
+                    ctx.fillStyle = '#6c757d';
+                    ctx.font = '9px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText((i + 1).toString(), x, height - 10);
+                }
+            });
+            
+            // 标题
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('TTFT时间轴 (ms)', padding.left, 12);
+            
+            // 图例
+            let legendX = width - padding.right - 120;
+            const legendY = 12;
+            
+            // 正常点
+            ctx.beginPath();
+            ctx.arc(legendX, legendY, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#0056b3';
+            ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('正常', legendX + 8, legendY + 3);
+            
+            // 警告点
+            legendX += 40;
+            ctx.beginPath();
+            ctx.arc(legendX, legendY, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffc107';
+            ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.fillText('超时', legendX + 8, legendY + 3);
+            
+            // 临界点
+            legendX += 40;
+            ctx.beginPath();
+            ctx.arc(legendX, legendY, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#dc3545';
+            ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.fillText('临界', legendX + 8, legendY + 3);
         }
     </script>
 </body>

@@ -61,7 +61,14 @@ export FROM_EMAIL=your_email@gmail.com
 
 如果不配置邮件服务，系统将使用模拟模式，验证码将显示在控制台日志中。
 
-3. 启动应用
+3. 配置微信登录（可选）
+```bash
+# 在 config.py 中修改 WECHAT_CONFIG 的 redirect_uri
+# 例如：http://your-domain.com/api/auth/wechat/callback
+# 注意：需要在微信公众平台配置网页授权域名
+```
+
+4. 启动应用
 ```bash
 python app.py
 ```

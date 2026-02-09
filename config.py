@@ -1,5 +1,23 @@
 # 系统配置
 
+# 微信公众账号配置
+# 重要：需要在微信公众平台进行以下配置：
+# 1. 设置 -> 公众号设置 -> 功能设置 -> 网页授权域名 -> 添加你的域名
+# 2. 开发 -> 基本配置 -> 获取 AppID 和 AppSecret
+# 3. 本地测试需要使用内网穿透工具（如 ngrok），并将生成的域名配置到网页授权域名
+WECHAT_CONFIG = {
+    'app_id': 'wxea13bb2c75b937a8',
+    'app_secret': '03168a006a802b11a4d73c12e1f77d48',
+    # 授权回调域名，需要在微信公众平台配置
+    # 格式：http://你的域名/api/auth/wechat/callback
+    # 本地测试可以使用内网穿透工具，如 ngrok，然后填写：http://xxx.ngrok.io/api/auth/wechat/callback
+    'redirect_uri': 'http://site.huaqiang.art/api/auth/wechat/callback',
+    # 授权作用域：
+    # - snsapi_base：静默授权，无需用户点击同意，但只能获取openid
+    # - snsapi_userinfo：需要用户点击同意，可以获取用户昵称和头像
+    'scope': 'snsapi_userinfo',
+}
+
 # 广告位配置
 AD_CONFIG = {
     # 总开关：是否启用广告位

@@ -30,7 +30,10 @@ class Database:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    email TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE,
+                    wechat_openid TEXT UNIQUE,
+                    wechat_nickname TEXT,
+                    wechat_headimgurl TEXT,
                     created_at INTEGER NOT NULL,
                     last_login INTEGER
                 )
@@ -100,15 +103,15 @@ class Database:
     
     # ============ 用户相关 ============
     
-    def create_user(self, email):
+    def create_user(self, email=None, wechat_openid=None, wechat_nickname=None, wechat_headimgurl=None):
         """创建新用户"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             now = int(time.time())
             cursor.execute('''
-                INSERT INTO users (email, created_at, last_login)
-                VALUES (?, ?, ?)
-            ''', (email, now, now))
+                INSERT INTO users (email, wechat_openid, wechat_nickname, wechat_headimgurl, created_at, last_login)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (email, wechat_openid, wechat_nickname, wechat_headimgurl, now, now))
             return cursor.lastrowid
     
     def get_user_by_email(self, email):
@@ -120,6 +123,24 @@ class Database:
             if row:
                 return dict(row)
             return None
+    
+    def get_user_by_wechat_openid(self, openid):
+        """通过微信openid获取用户"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM users WHERE wechat_openid = ?', (openid,))
+            row = cursor.fetchone()
+            if row:
+                return dict(row)
+            return None
+    
+    def update_user_wechat_info(self, user_id, nickname, headimgurl):
+        """更新用户微信信息"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users SET wechat_nickname = ?, wechat_headimgurl = ? WHERE id = ?
+            ''', (nickname, headimgurl, user_id))
     
     def get_user_by_id(self, user_id):
         """通过ID获取用户"""

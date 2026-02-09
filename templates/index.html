@@ -216,7 +216,7 @@
                                 <i class="bi bi-repeat me-1"></i>测试次数
                             </label>
                             <input type="number" class="form-control" id="testCount" value="5" min="1" max="20">
-                            <div class="form-text">建议 5-10 次以获得稳定的统计结果</div>
+                            <div class="form-text">建议 5-10 次以获得稳定的统计结果，大于10次将会测试性能RPS</div>
                         </div>
 
                         <button type="button" class="btn btn-primary w-100" id="startTestBtn" onclick="startTest()">
@@ -279,7 +279,26 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="emailStep">
+                    <!-- 登录方式选择 -->
+                    <div id="loginMethodStep">
+                        <p class="text-muted mb-3">请选择登录方式</p>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success btn-lg" onclick="startWechatLogin()">
+                                <i class="bi bi-wechat me-2"></i>微信登录
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" onclick="showEmailLogin()">
+                                <i class="bi bi-envelope me-2"></i>邮箱验证码登录
+                            </button>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <small class="text-muted">
+                                <i class="bi bi-shield-check me-1"></i>
+                                登录即表示同意每日10次测试额度
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div id="emailStep" style="display: none;">
                         <p class="text-muted mb-3">请输入您的邮箱地址，我们将发送验证码</p>
                         <div class="mb-3">
                             <label class="form-label">邮箱地址</label>
@@ -310,6 +329,11 @@
                         <div class="text-center mt-3">
                             <button type="button" class="btn btn-link" id="resendBtn" onclick="sendCode()" disabled>
                                 重新发送 (<span id="countdown">60</span>s)
+                            </button>
+                        </div>
+                        <div class="text-center mt-2">
+                            <button type="button" class="btn btn-link text-muted" onclick="backToLoginMethod()">
+                                <i class="bi bi-arrow-left me-1"></i>返回选择其他登录方式
                             </button>
                         </div>
                     </div>
@@ -378,13 +402,30 @@
 
         function updateUserUI() {
             const userSection = document.getElementById('userSection');
-            const initial = currentUser.email.charAt(0).toUpperCase();
+            
+            // 获取显示名称和头像
+            let displayName = currentUser.display_name || currentUser.email || '用户';
+            let avatarHtml = '';
+            
+            if (currentUser.wechat_headimgurl) {
+                // 微信用户：显示微信头像
+                avatarHtml = `<img src="${currentUser.wechat_headimgurl}" alt="头像" class="user-avatar me-2" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover;">`;
+            } else {
+                // 邮箱用户：显示首字母
+                const initial = displayName.charAt(0).toUpperCase();
+                avatarHtml = `<span class="user-avatar me-2">${initial}</span>`;
+            }
+            
+            // 截断过长的用户名
+            if (displayName.length > 20) {
+                displayName = displayName.substring(0, 18) + '...';
+            }
             
             userSection.innerHTML = `
                 <div class="dropdown">
                     <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <span class="user-avatar me-2">${initial}</span>
-                        ${currentUser.email}
+                        ${avatarHtml}
+                        ${displayName}
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="/history">
@@ -401,12 +442,70 @@
 
         function showLoginModal() {
             const modal = new bootstrap.Modal(document.getElementById('loginModal'));
-            document.getElementById('emailStep').style.display = 'block';
+            // 重置到登录方式选择页面
+            document.getElementById('loginMethodStep').style.display = 'block';
+            document.getElementById('emailStep').style.display = 'none';
             document.getElementById('codeStep').style.display = 'none';
             document.getElementById('emailInput').value = '';
             document.getElementById('codeInput').value = '';
             modal.show();
         }
+        
+        function showEmailLogin() {
+            document.getElementById('loginMethodStep').style.display = 'none';
+            document.getElementById('emailStep').style.display = 'block';
+            document.getElementById('codeStep').style.display = 'none';
+        }
+        
+        function backToLoginMethod() {
+            document.getElementById('loginMethodStep').style.display = 'block';
+            document.getElementById('emailStep').style.display = 'none';
+            document.getElementById('codeStep').style.display = 'none';
+            clearInterval(countdownInterval);
+        }
+        
+        // 微信登录
+        async function startWechatLogin() {
+            try {
+                const response = await fetch('/api/auth/wechat/login');
+                const data = await response.json();
+                
+                if (response.ok && data.auth_url) {
+                    // 在新窗口打开微信授权页面
+                    const width = 600;
+                    const height = 600;
+                    const left = (window.screen.width - width) / 2;
+                    const top = (window.screen.height - height) / 2;
+                    
+                    window.open(
+                        data.auth_url,
+                        'wechatLogin',
+                        `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,scrollbars=yes`
+                    );
+                } else {
+                    showToast('获取微信授权链接失败', 'error');
+                }
+            } catch (error) {
+                console.error('微信登录错误:', error);
+                showToast('微信登录初始化失败', 'error');
+            }
+        }
+        
+        // 监听微信登录成功消息
+        window.addEventListener('message', async function(event) {
+            if (event.data && event.data.type === 'wechat_login_success') {
+                // 关闭登录弹窗
+                const modal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // 刷新用户信息
+                await loadUserInfo();
+                
+                showToast('微信登录成功！', 'success');
+            }
+        });
 
         async function sendCode() {
             const email = document.getElementById('emailInput').value.trim();
