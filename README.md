@@ -6,6 +6,8 @@
 
 ### 用户系统
 - 邮箱验证码注册/登录
+- 微信公众号授权登录（微信内使用）
+- 微信扫码登录（PC浏览器，需配置开放平台）
 - 注册用户每日 10 次测试额度
 - 非注册用户每日 3 次测试额度
 
@@ -73,7 +75,7 @@ export FROM_EMAIL=your_email@gmail.com
 python app.py
 ```
 
-4. 访问系统
+5. 访问系统
 打开浏览器访问: http://localhost:5001
 
 ### Docker 部署
@@ -90,6 +92,8 @@ docker run -p 5001:5001 -e SMTP_USERNAME=xxx -e SMTP_PASSWORD=xxx ai-monitor
 - **POST** `/api/auth/register` - 注册/登录
 - **POST** `/api/auth/logout` - 退出登录
 - **GET** `/api/auth/me` - 获取当前用户信息
+- **GET** `/api/auth/wechat/login` - 微信公众号登录（微信内）
+- **GET** `/api/auth/wechat/open/login` - 微信开放平台扫码登录（PC浏览器）
 
 ### 测试
 - **GET** `/api/test/limit` - 获取测试限制信息
@@ -102,6 +106,9 @@ docker run -p 5001:5001 -e SMTP_USERNAME=xxx -e SMTP_PASSWORD=xxx ai-monitor
 ### users 表
 - id: 用户ID
 - email: 邮箱地址
+- wechat_openid: 微信openid
+- wechat_nickname: 微信昵称
+- wechat_headimgurl: 微信头像
 - created_at: 创建时间
 - last_login: 最后登录时间
 
@@ -121,6 +128,56 @@ docker run -p 5001:5001 -e SMTP_USERNAME=xxx -e SMTP_PASSWORD=xxx ai-monitor
 - token: 分享 token
 - created_at: 创建时间
 - expires_at: 过期时间
+
+## 微信登录配置
+
+### 方式一：公众号网页授权（微信内使用）
+适用于在微信内置浏览器中访问网站。
+
+#### 配置步骤：
+1. 登录微信公众平台
+2. 设置 -> 公众号设置 -> 功能设置 -> 网页授权域名
+3. 添加你的域名（如：`your-domain.com`）
+4. 修改 `config.py` 中的 `WECHAT_CONFIG['redirect_uri']`
+
+#### 本地测试：
+1. 使用内网穿透工具（如 ngrok）
+2. 运行 `ngrok http 5001` 获取临时域名
+3. 将临时域名配置到微信公众平台的网页授权域名
+4. 修改 `config.py` 中的 `redirect_uri`：
+   ```python
+   'redirect_uri': 'https://xxx.ngrok.io/api/auth/wechat/callback'
+   ```
+
+### 方式二：微信开放平台扫码登录（PC浏览器使用）
+适用于在 Chrome、Safari 等 PC 浏览器中显示微信二维码扫码登录。
+
+#### 配置步骤：
+1. 访问 [微信开放平台](https://open.weixin.qq.com)
+2. 注册开发者账号并认证
+3. 创建**网站应用**
+4. 获取 AppID 和 AppSecret
+5. 设置回调域名
+6. 填写 `config.py` 中的 `WECHAT_OPEN_CONFIG`：
+   ```python
+   WECHAT_OPEN_CONFIG = {
+       'app_id': 'wx1234567890abcdef',
+       'app_secret': 'your_app_secret',
+       'redirect_uri': 'https://your-domain.com/api/auth/wechat/open/callback',
+   }
+   ```
+
+#### 登录流程：
+1. 用户点击"微信扫码登录"按钮
+2. 页面显示微信登录二维码
+3. 用户使用微信扫一扫
+4. 扫码确认后自动登录
+5. 支持获取微信昵称和头像
+
+#### 注意事项：
+- 如果没有配置开放平台，PC 浏览器会提示使用邮箱登录
+- 二维码有效期为5分钟，过期后可点击刷新
+- 系统会自动检测浏览器类型，微信内自动跳转授权
 
 ## 安全说明
 

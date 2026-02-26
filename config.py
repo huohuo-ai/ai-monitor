@@ -18,6 +18,20 @@ WECHAT_CONFIG = {
     'scope': 'snsapi_userinfo',
 }
 
+# 微信开放平台配置（用于PC浏览器扫码登录）
+# 如需在PC浏览器使用微信扫码登录，需要：
+# 1. 访问 https://open.weixin.qq.com 注册成为开发者
+# 2. 创建网站应用，获取 AppID 和 AppSecret
+# 3. 设置回调域名
+WECHAT_OPEN_CONFIG = {
+    # 注意：这里需要填写微信开放平台的 AppID（不是公众号的）
+    # 格式：wx + 16位小写字母数字组合
+    'app_id': 'wxc8851e4d9a983a3e',  # 例如：'wx1234567890abcdef'
+    'app_secret': '5ee5b8a728635698bc20c2070f518cad',
+    # 授权回调地址，需要在微信开放平台配置
+    'redirect_uri': 'http://site.huaqiang.art/api/auth/wechat/open/callback',
+}
+
 # 广告位配置
 AD_CONFIG = {
     # 总开关：是否启用广告位
