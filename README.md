@@ -82,7 +82,15 @@ python app.py
 
 ```bash
 docker build -t ai-monitor .
-docker run -p 5001:5001 -e SMTP_USERNAME=xxx -e SMTP_PASSWORD=xxx ai-monitor
+        docker run -d --name $CONTAINER_NAME -p 5001:5001 \
+        -e FLASK_DEBUG=1 \
+        -e SMTP_SERVER= \
+        -e SMTP_PORT=465 \
+        -e SMTP_USERNAME= \
+        -e SMTP_PASSWORD= \
+        -e FROM_EMAIL= \
+        -e ENABLE_WECHAT_LOGIN=true \
+        $IMAGE_NAME
 ```
 
 ## API 接口

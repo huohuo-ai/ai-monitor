@@ -51,8 +51,8 @@ AD_CONFIG = {
         {
             'icon': 'bi-robot',
             'name': 'DeepSeek API',
-            'desc': '国产大模型，性价比之选',
-            'url': 'https://platform.deepseek.com/',
+            'desc': 'MaaS平台，性价比之选',
+            'url': 'https://www.wangsu.com/product/352',
             'badge': '热门',
             'badge_color': 'danger'
         },
