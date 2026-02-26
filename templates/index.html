@@ -294,10 +294,10 @@
                     <div id="loginMethodStep">
                         <p class="text-muted mb-3">请选择登录方式</p>
                         <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-success btn-lg" onclick="showWechatQRCode()">
+                            <button type="button" id="wechatLoginBtn" class="btn btn-success btn-lg" onclick="showWechatQRCode()">
                                 <i class="bi bi-wechat me-2"></i>微信扫码登录
                             </button>
-                            <button type="button" class="btn btn-outline-primary" onclick="showEmailLogin()">
+                            <button type="button" id="emailLoginBtn" class="btn btn-outline-primary" onclick="showEmailLogin()">
                                 <i class="bi bi-envelope me-2"></i>邮箱验证码登录
                             </button>
                         </div>
@@ -413,13 +413,44 @@
         let testLimit = { logged_in: false, daily_limit: 3, today_remaining: 3 };
         let currentResults = null;
         let countdownInterval = null;
+        let appConfig = { wechat_login_enabled: false, ad_enabled: false };
 
         // ============ 初始化 ============
         document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
             loadUserInfo();
             addModelCard();
             updateLimitDisplay();
         });
+
+        // 加载应用配置
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                if (response.ok) {
+                    appConfig = await response.json();
+                    // 根据配置更新登录按钮显示
+                    updateLoginButtons();
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+            }
+        }
+
+        // 根据配置更新登录按钮显示
+        function updateLoginButtons() {
+            const wechatBtn = document.getElementById('wechatLoginBtn');
+            const emailBtn = document.getElementById('emailLoginBtn');
+            
+            if (wechatBtn) {
+                wechatBtn.style.display = appConfig.wechat_login_enabled ? 'block' : 'none';
+            }
+            
+            // 如果微信登录禁用，自动切换到邮箱登录
+            if (!appConfig.wechat_login_enabled && emailBtn) {
+                showEmailLogin();
+            }
+        }
 
         // ============ 用户认证 ============
         async function loadUserInfo() {

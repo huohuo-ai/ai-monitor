@@ -6,9 +6,20 @@
 # 构建镜像
 docker build -t ai-monitor:latest .
 
-# 运行容器
+# 运行容器（基础版）
 docker run -d -p 5001:5001 --name ai-monitor ai-monitor:latest
+
+# 运行容器（启用微信登录）
+docker run -d -p 5001:5001 \
+  -e ENABLE_WECHAT_LOGIN=true \
+  --name ai-monitor ai-monitor:latest
 ```
+
+### 环境变量配置
+
+| 变量名 | 说明 | 默认值 | 可选值 |
+|--------|------|--------|--------|
+| `ENABLE_WECHAT_LOGIN` | 是否启用微信登录功能 | `false` | `true`/`false` |
 
 ## 2. GitHub Actions自动构建配置
 

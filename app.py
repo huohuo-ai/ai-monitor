@@ -8,7 +8,7 @@ import re
 
 from database import db
 from email_service import send_verification_email
-from config import AD_CONFIG, WECHAT_CONFIG, WECHAT_OPEN_CONFIG
+from config import AD_CONFIG, WECHAT_CONFIG, WECHAT_OPEN_CONFIG, ENABLE_WECHAT_LOGIN
 import hashlib
 import urllib.parse
 
@@ -63,6 +63,15 @@ def history():
 def share_result(share_token):
     """分享结果页面"""
     return render_template('share.html', share_token=share_token)
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """获取前端配置（功能开关等）"""
+    return jsonify({
+        'wechat_login_enabled': ENABLE_WECHAT_LOGIN,
+        'ad_enabled': AD_CONFIG.get('enabled', False)
+    })
+
 
 @app.route('/MP_verify_AMrCKwIdXXvYtY53.txt')
 def mp_verify():
@@ -254,6 +263,8 @@ def get_test_history():
 @app.route('/api/auth/wechat/login', methods=['GET'])
 def wechat_login():
     """生成微信授权URL"""
+    if not ENABLE_WECHAT_LOGIN:
+        return jsonify({'error': '微信登录已禁用'}), 403
     # 构建授权回调URL
     redirect_uri = WECHAT_CONFIG['redirect_uri']
     
@@ -417,6 +428,10 @@ def wechat_callback():
 @app.route('/api/auth/wechat/open/login', methods=['GET'])
 def wechat_open_login():
     """生成微信开放平台扫码登录URL"""
+    # 检查微信登录总开关
+    if not ENABLE_WECHAT_LOGIN:
+        return jsonify({'error': '微信登录已禁用'}), 403
+    
     # 检查是否配置了开放平台
     if not WECHAT_OPEN_CONFIG.get('app_id'):
         return jsonify({'error': '未配置微信开放平台，请使用邮箱登录或联系管理员'}), 400

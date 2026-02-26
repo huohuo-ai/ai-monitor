@@ -1,4 +1,10 @@
+import os
+
 # 系统配置
+
+# 微信登录功能总开关（通过环境变量控制）
+# 设置为 true/1/yes 启用，其他值禁用
+ENABLE_WECHAT_LOGIN = os.getenv('ENABLE_WECHAT_LOGIN', 'false').lower() in ('true', '1', 'yes', 'on')
 
 # 微信公众账号配置
 # 重要：需要在微信公众平台进行以下配置：
