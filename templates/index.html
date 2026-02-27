@@ -174,7 +174,7 @@
     <nav class="navbar navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="bi bi-speedometer2 me-2"></i>AI模型性能拨测系统 <span class="badge bg-light text-dark ms-2" style="font-size: 0.6em; vertical-align: middle;">V1.0.5.1</span>
+                <i class="bi bi-speedometer2 me-2"></i>AI模型性能拨测系统 <span class="badge bg-light text-dark ms-2" style="font-size: 0.6em; vertical-align: middle;">V1.0.5.2</span>
             </a>
             <div class="user-menu">
                 <a href="/history" class="btn btn-outline-light btn-sm">
@@ -973,46 +973,57 @@
             
             toggleTestLoading(true);
             
-            // 判断是否启用 RPS 测试
-            const isRPSTest = testCount > 10;
-            const rpsBadge = isRPSTest ? '<span class="badge bg-warning text-dark ms-2">RPS测试模式</span>' : '';
-            const rpsHint = isRPSTest ? '<p class="text-warning small mt-2"><i class="bi bi-lightning-charge me-1"></i>将在1秒内快速发送所有请求以测试RPS极限</p>' : '';
-            
-            document.getElementById('resultsContainer').innerHTML = `
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary mb-3" role="status"></div>
-                    <p>正在执行测试，请稍候...${rpsBadge}</p>
-                    <p class="text-muted small">正在测试 ${models.length} 个模型，每模型 ${testCount} 次</p>
-                    ${rpsHint}
-                </div>
-            `;
-            
-            const results = [];
-            
-            for (let i = 0; i < models.length; i++) {
-                const model = models[i];
-                const result = await testModel(model, testCount, i + 1, models.length);
-                if (result) {
-                    results.push(result);
+            try {
+                // 判断是否启用 RPS 测试
+                const isRPSTest = testCount > 10;
+                const rpsBadge = isRPSTest ? '<span class="badge bg-warning text-dark ms-2">RPS测试模式</span>' : '';
+                const rpsHint = isRPSTest ? '<p class="text-warning small mt-2"><i class="bi bi-lightning-charge me-1"></i>将在1秒内快速发送所有请求以测试RPS极限</p>' : '';
+                
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <p>正在执行测试，请稍候...${rpsBadge}</p>
+                        <p class="text-muted small">正在测试 ${models.length} 个模型，每模型 ${testCount} 次</p>
+                        ${rpsHint}
+                    </div>
+                `;
+                
+                const results = [];
+                
+                for (let i = 0; i < models.length; i++) {
+                    const model = models[i];
+                    const result = await testModel(model, testCount, i + 1, models.length);
+                    if (result) {
+                        results.push(result);
+                    }
                 }
+                
+                currentResults = {
+                    models: models.map(m => ({ provider: m.provider, url: m.url })),
+                    test_count: testCount,
+                    results: results,
+                    test_time: new Date().toISOString()
+                };
+                
+                displayResults(results);
+                
+                // 显示保存按钮
+                document.getElementById('saveResultBtn').style.display = 'inline-block';
+                
+                // 更新测试限制
+                testLimit.today_remaining--;
+                updateLimitDisplay();
+            } catch (error) {
+                console.error('测试执行出错:', error);
+                showToast('测试执行出错: ' + (error.message || '未知错误'), 'error');
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle me-2"></i>测试执行失败: ${error.message || '未知错误'}
+                    </div>
+                `;
+            } finally {
+                toggleTestLoading(false);
             }
-            
-            currentResults = {
-                models: models.map(m => ({ provider: m.provider, url: m.url })),
-                test_count: testCount,
-                results: results,
-                test_time: new Date().toISOString()
-            };
-            
-            displayResults(results);
-            toggleTestLoading(false);
-            
-            // 显示保存按钮
-            document.getElementById('saveResultBtn').style.display = 'inline-block';
-            
-            // 更新测试限制
-            testLimit.today_remaining--;
-            updateLimitDisplay();
         }
 
         function collectModelConfigs() {
