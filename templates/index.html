@@ -174,7 +174,7 @@
     <nav class="navbar navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="bi bi-speedometer2 me-2"></i>AI模型性能拨测系统
+                <i class="bi bi-speedometer2 me-2"></i>AI模型性能拨测系统 <span class="badge bg-light text-dark ms-2" style="font-size: 0.6em; vertical-align: middle;">V1.0.5.1</span>
             </a>
             <div class="user-menu">
                 <a href="/history" class="btn btn-outline-light btn-sm">
@@ -936,6 +936,13 @@
             const urlInput = card.querySelector('.model-url');
             const provider = select.value;
             
+            // 自定义时不自动填充 URL
+            if (provider === 'custom') {
+                urlInput.value = '';
+                urlInput.placeholder = '请输入自定义 API 地址';
+                return;
+            }
+            
             const urls = {
                 'deepseek': 'https://api.deepseek.com',
                 'openai': 'https://api.openai.com',
@@ -945,6 +952,7 @@
             
             if (urls[provider]) {
                 urlInput.value = urls[provider];
+                urlInput.placeholder = 'https://api.xxx.com';
             }
         }
 
