@@ -897,9 +897,30 @@
                     <input type="password" class="form-control model-key" 
                            placeholder="sk-xxxxxxxxxxxxxxxx">
                 </div>
+                <div class="mb-3 custom-json-config" style="display: none;">
+                    <label class="form-label">
+                        自定义请求 JSON
+                        <i class="bi bi-question-circle ms-1 text-muted" 
+                           title='自定义请求的 JSON 参数，如：{"model": "gpt-4", "messages": [...], "max_tokens": 100}'></i>
+                    </label>
+                    <textarea class="form-control custom-json" rows="6" 
+                              placeholder='{&#10;  "model": "your-model-name",&#10;  "messages": [{"role": "user", "content": "Hello"}],&#10;  "max_tokens": 100,&#10;  "stream": true&#10;}'></textarea>
+                    <div class="form-text text-muted">仅在选择了"自定义"提供商时有效</div>
+                </div>
             `;
             
             container.appendChild(card);
+            
+            // 为自定义提供商绑定切换显示事件
+            const providerSelect = card.querySelector('.model-provider');
+            providerSelect.addEventListener('change', function() {
+                const jsonConfig = card.querySelector('.custom-json-config');
+                if (this.value === 'custom') {
+                    jsonConfig.style.display = 'block';
+                } else {
+                    jsonConfig.style.display = 'none';
+                }
+            });
             
             // 自动填充默认 URL
             const select = card.querySelector('.model-provider');
@@ -994,9 +1015,23 @@
                 const provider = card.querySelector('.model-provider').value;
                 const url = card.querySelector('.model-url').value.trim();
                 const key = card.querySelector('.model-key').value.trim();
+                const customJson = card.querySelector('.custom-json')?.value.trim();
                 
                 if (url && key) {
-                    models.push({ provider, url, key });
+                    const modelConfig = { provider, url, key };
+                    
+                    // 如果是自定义提供商，解析并验证 JSON
+                    if (provider === 'custom' && customJson) {
+                        try {
+                            const parsedJson = JSON.parse(customJson);
+                            modelConfig.customRequestBody = parsedJson;
+                        } catch (e) {
+                            showToast(`模型配置中的 JSON 格式无效: ${e.message}`, 'error');
+                            throw new Error('JSON 解析失败');
+                        }
+                    }
+                    
+                    models.push(modelConfig);
                 }
             });
             
@@ -1048,12 +1083,22 @@
                 let currentTtft = null;
                 
                 try {
-                    const requestBody = {
-                        model: modelName,
-                        messages: [{ role: 'user', content: 'Hello, how are you?' }],
-                        max_tokens: 50,
-                        stream: true
-                    };
+                    // 使用自定义请求体（如果配置了），否则使用默认
+                    let requestBody;
+                    if (model.provider === 'custom' && model.customRequestBody) {
+                        requestBody = {
+                            ...model.customRequestBody,
+                            // 强制启用 stream 以支持流式测试
+                            stream: true
+                        };
+                    } else {
+                        requestBody = {
+                            model: modelName,
+                            messages: [{ role: 'user', content: 'Hello, how are you?' }],
+                            max_tokens: 50,
+                            stream: true
+                        };
+                    }
                     
                     const response = await fetch(apiUrl, {
                         method: 'POST',
