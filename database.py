@@ -495,7 +495,7 @@ class Database:
                 FROM ad_clicks
                 WHERE clicked_at >= ?
                 GROUP BY date(clicked_at, 'unixepoch', 'localtime')
-                ORDER BY date DESC
+                ORDER BY date ASC
             ''', (since,))
             
             return [dict(row) for row in cursor.fetchall()]
@@ -532,7 +532,7 @@ class Database:
                 FROM users
                 WHERE created_at >= ?
                 GROUP BY date(created_at, 'unixepoch', 'localtime')
-                ORDER BY date DESC
+                ORDER BY date ASC
             ''', (since,))
             daily_registrations = [dict(row) for row in cursor.fetchall()]
             

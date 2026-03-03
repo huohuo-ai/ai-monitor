@@ -109,7 +109,12 @@
         }
         .chart-container {
             height: 300px;
+            width: 100%;
             position: relative;
+        }
+        .chart-container canvas {
+            max-height: 100% !important;
+            max-width: 100% !important;
         }
         /* 自定义滚动条样式 */
         .main-content::-webkit-scrollbar {
@@ -490,52 +495,71 @@
         
         // 更新图表
         function updateCharts(data) {
+            // 准备数据 - 取最近7天
+            const adStats = (data.ad_daily_stats || []).slice(-7);
+            const userStats = (data.user_daily_stats || []).slice(-7);
+            
             // 广告点击趋势图
             const adCtx = document.getElementById('adClickChart').getContext('2d');
             if (adClickChart) adClickChart.destroy();
             
-            adClickChart = new Chart(adCtx, {
-                type: 'line',
-                data: {
-                    labels: (data.ad_daily_stats || []).slice(-7).map(s => s.date),
-                    datasets: [{
-                        label: '点击次数',
-                        data: (data.ad_daily_stats || []).slice(-7).map(s => s.count),
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
+            if (adStats.length === 0) {
+                // 无数据显示占位文字
+                adCtx.font = '14px Arial';
+                adCtx.fillStyle = '#999';
+                adCtx.textAlign = 'center';
+                adCtx.fillText('暂无数据', adCtx.canvas.width / 2, adCtx.canvas.height / 2);
+            } else {
+                adClickChart = new Chart(adCtx, {
+                    type: 'line',
+                    data: {
+                        labels: adStats.map(s => s.date),
+                        datasets: [{
+                            label: '点击次数',
+                            data: adStats.map(s => s.count),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
             
             // 用户注册趋势图
             const userCtx = document.getElementById('userRegChart').getContext('2d');
             if (userRegChart) userRegChart.destroy();
             
-            userRegChart = new Chart(userCtx, {
-                type: 'bar',
-                data: {
-                    labels: (data.user_daily_stats || []).slice(-7).map(s => s.date),
-                    datasets: [{
-                        label: '注册人数',
-                        data: (data.user_daily_stats || []).slice(-7).map(s => s.count),
-                        backgroundColor: '#764ba2'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
+            if (userStats.length === 0) {
+                userCtx.font = '14px Arial';
+                userCtx.fillStyle = '#999';
+                userCtx.textAlign = 'center';
+                userCtx.fillText('暂无数据', userCtx.canvas.width / 2, userCtx.canvas.height / 2);
+            } else {
+                userRegChart = new Chart(userCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: userStats.map(s => s.date),
+                        datasets: [{
+                            label: '注册人数',
+                            data: userStats.map(s => s.count),
+                            backgroundColor: '#764ba2'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
         }
         
         // 加载广告列表
@@ -735,23 +759,45 @@
                     const ctx = document.getElementById('adPieChart').getContext('2d');
                     if (adPieChart) adPieChart.destroy();
                     
-                    adPieChart = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.stats.map(s => s.ad_name),
-                            datasets: [{
-                                data: data.stats.map(s => s.click_count),
-                                backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe']
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { position: 'bottom' }
+                    // 扩展颜色数组（支持最多20个广告）
+                    const colors = [
+                        '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe',
+                        '#43e97b', '#fa709a', '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd',
+                        '#00d2d3', '#1dd1a1', '#ff9f43', '#ee5a6f', '#c56cf0', '#18dcff',
+                        '#7d5fff', '#ff3838'
+                    ];
+                    
+                    if (data.stats.length === 0) {
+                        ctx.font = '14px Arial';
+                        ctx.fillStyle = '#999';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('暂无数据', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                    } else {
+                        adPieChart = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: data.stats.map(s => s.ad_name),
+                                datasets: [{
+                                    data: data.stats.map(s => s.click_count),
+                                    backgroundColor: colors
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { 
+                                        position: 'bottom',
+                                        labels: {
+                                            boxWidth: 12,
+                                            padding: 10,
+                                            font: { size: 11 }
+                                        }
+                                    }
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                     
                     // 最近点击记录
                     const recentTable = document.getElementById('recentClicksTable');
