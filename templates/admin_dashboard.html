@@ -113,8 +113,8 @@
             position: relative;
         }
         .chart-container canvas {
-            max-height: 100% !important;
-            max-width: 100% !important;
+            width: 100% !important;
+            height: 100% !important;
         }
         /* 自定义滚动条样式 */
         .main-content::-webkit-scrollbar {
@@ -238,7 +238,7 @@
                                     <div class="section-title">
                                         <i class="bi bi-graph-up-arrow"></i> 近期广告点击趋势
                                     </div>
-                                    <canvas id="adClickChart" class="chart-container"></canvas>
+                                    <div class="chart-container"><canvas id="adClickChart"></canvas></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -246,7 +246,7 @@
                                     <div class="section-title">
                                         <i class="bi bi-person-plus"></i> 近期用户注册趋势
                                     </div>
-                                    <canvas id="userRegChart" class="chart-container"></canvas>
+                                    <div class="chart-container"><canvas id="userRegChart"></canvas></div>
                                 </div>
                             </div>
                         </div>
@@ -327,7 +327,7 @@
                                         <div class="section-title">
                                             <i class="bi bi-pie-chart"></i> 广告点击分布
                                         </div>
-                                        <canvas id="adPieChart" class="chart-container"></canvas>
+                                        <div class="chart-container"><canvas id="adPieChart"></canvas></div>
                                     </div>
                                 </div>
                             </div>
@@ -500,17 +500,20 @@
             const userStats = (data.user_daily_stats || []).slice(-7);
             
             // 广告点击趋势图
-            const adCtx = document.getElementById('adClickChart').getContext('2d');
+            const adCanvas = document.getElementById('adClickChart');
             if (adClickChart) adClickChart.destroy();
             
             if (adStats.length === 0) {
                 // 无数据显示占位文字
+                adCanvas.width = adCanvas.parentElement.clientWidth;
+                adCanvas.height = adCanvas.parentElement.clientHeight;
+                const adCtx = adCanvas.getContext('2d');
                 adCtx.font = '14px Arial';
                 adCtx.fillStyle = '#999';
                 adCtx.textAlign = 'center';
-                adCtx.fillText('暂无数据', adCtx.canvas.width / 2, adCtx.canvas.height / 2);
+                adCtx.fillText('暂无数据', adCanvas.width / 2, adCanvas.height / 2);
             } else {
-                adClickChart = new Chart(adCtx, {
+                adClickChart = new Chart(adCanvas, {
                     type: 'line',
                     data: {
                         labels: adStats.map(s => s.date),
@@ -533,16 +536,19 @@
             }
             
             // 用户注册趋势图
-            const userCtx = document.getElementById('userRegChart').getContext('2d');
+            const userCanvas = document.getElementById('userRegChart');
             if (userRegChart) userRegChart.destroy();
             
             if (userStats.length === 0) {
+                userCanvas.width = userCanvas.parentElement.clientWidth;
+                userCanvas.height = userCanvas.parentElement.clientHeight;
+                const userCtx = userCanvas.getContext('2d');
                 userCtx.font = '14px Arial';
                 userCtx.fillStyle = '#999';
                 userCtx.textAlign = 'center';
-                userCtx.fillText('暂无数据', userCtx.canvas.width / 2, userCtx.canvas.height / 2);
+                userCtx.fillText('暂无数据', userCanvas.width / 2, userCanvas.height / 2);
             } else {
-                userRegChart = new Chart(userCtx, {
+                userRegChart = new Chart(userCanvas, {
                     type: 'bar',
                     data: {
                         labels: userStats.map(s => s.date),
@@ -756,7 +762,7 @@
                     });
                     
                     // 饼图
-                    const ctx = document.getElementById('adPieChart').getContext('2d');
+                    const pieCanvas = document.getElementById('adPieChart');
                     if (adPieChart) adPieChart.destroy();
                     
                     // 扩展颜色数组（支持最多20个广告）
@@ -768,12 +774,15 @@
                     ];
                     
                     if (data.stats.length === 0) {
-                        ctx.font = '14px Arial';
-                        ctx.fillStyle = '#999';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('暂无数据', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                        pieCanvas.width = pieCanvas.parentElement.clientWidth;
+                        pieCanvas.height = pieCanvas.parentElement.clientHeight;
+                        const pieCtx = pieCanvas.getContext('2d');
+                        pieCtx.font = '14px Arial';
+                        pieCtx.fillStyle = '#999';
+                        pieCtx.textAlign = 'center';
+                        pieCtx.fillText('暂无数据', pieCanvas.width / 2, pieCanvas.height / 2);
                     } else {
-                        adPieChart = new Chart(ctx, {
+                        adPieChart = new Chart(pieCanvas, {
                             type: 'doughnut',
                             data: {
                                 labels: data.stats.map(s => s.ad_name),
