@@ -178,10 +178,26 @@
                     <span class="text-muted" id="currentTime"></span>
                 </nav>
                 
+                <!-- 全局刷新按钮 -->
+                <div class="px-4 pt-3 pb-0">
+                    <button class="btn btn-primary" onclick="refreshAllData()">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新当前页面数据
+                    </button>
+                </div>
+                
                 <div class="main-content">
                     <!-- 仪表盘 -->
                     <div id="dashboard" class="tab-content active">
-                        <div class="row mb-4">
+                        <div class="section-card">
+                            <div class="section-title d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-speedometer2"></i> 数据概览</span>
+                                <span class="text-muted small">点击上方刷新按钮获取最新数据</span>
+                            </div>
+                            <div class="alert alert-info" id="dashboardEmptyAlert">
+                                <i class="bi bi-info-circle me-2"></i>请点击上方的"刷新当前页面数据"按钮加载数据
+                            </div>
+                        </div>
+                        <div class="row mb-4" id="dashboardStats" style="display: none;">
                             <div class="col-md-3">
                                 <div class="stats-card">
                                     <div class="stats-icon bg-primary bg-opacity-10 text-primary">
@@ -242,41 +258,49 @@
                     
                     <!-- 广告管理 -->
                     <div id="ads" class="tab-content">
-                        <div class="section-card">
-                            <div class="section-title d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-badge-ad"></i> 广告位管理</span>
-                                <button class="btn btn-primary btn-sm" onclick="addAdForm()">
-                                    <i class="bi bi-plus"></i> 添加广告
-                                </button>
-                            </div>
-                            
-                            <div id="adForms">
-                                <!-- 广告表单将动态插入这里 -->
-                            </div>
-                            
-                            <div class="mt-3">
-                                <button class="btn btn-success" onclick="saveAds()">
-                                    <i class="bi bi-save"></i> 保存更改
-                                </button>
-                            </div>
+                        <div class="alert alert-info" id="adsEmptyAlert">
+                            <i class="bi bi-info-circle me-2"></i>请点击上方的"刷新当前页面数据"按钮加载广告配置
                         </div>
-                        
-                        <div class="section-card">
-                            <div class="section-title"><i class="bi bi-eye"></i> 广告位预览</div>
-                            <div id="adPreview">
-                                <!-- 广告预览将动态插入这里 -->
+                        <div id="adsContent" style="display: none;">
+                            <div class="section-card">
+                                <div class="section-title d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-badge-ad"></i> 广告位管理</span>
+                                    <button class="btn btn-primary btn-sm" onclick="addAdForm()">
+                                        <i class="bi bi-plus"></i> 添加广告
+                                    </button>
+                                </div>
+                                
+                                <div id="adForms">
+                                    <!-- 广告表单将动态插入这里 -->
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <button class="btn btn-success" onclick="saveAds()">
+                                        <i class="bi bi-save"></i> 保存更改
+                                    </button>
+                                </div>
                             </div>
-                            <div class="mt-3">
-                                <button class="btn btn-outline-primary" onclick="loadAds()">
-                                    <i class="bi bi-arrow-clockwise"></i> 刷新预览
-                                </button>
+                            
+                            <div class="section-card">
+                                <div class="section-title"><i class="bi bi-eye"></i> 广告位预览</div>
+                                <div id="adPreview">
+                                    <!-- 广告预览将动态插入这里 -->
+                                </div>
+                                <div class="mt-3">
+                                    <button class="btn btn-outline-primary" onclick="loadAds()">
+                                        <i class="bi bi-arrow-clockwise"></i> 刷新预览
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
                     <!-- 广告统计 -->
                     <div id="ad-stats" class="tab-content">
-                        <div class="row">
+                        <div class="alert alert-info" id="adStatsEmptyAlert">
+                            <i class="bi bi-info-circle me-2"></i>请点击上方的"刷新当前页面数据"按钮或下方的"刷新数据"按钮加载广告统计数据
+                        </div>
+                        <div class="row" id="adStatsContent" style="display: none;">
                             <div class="col-md-6">
                                 <div class="section-card">
                                     <div class="section-title d-flex justify-content-between align-items-center">
@@ -335,14 +359,18 @@
                     
                     <!-- 用户管理 -->
                     <div id="users" class="tab-content">
-                        <div class="section-card">
-                            <div class="section-title d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-people"></i> 用户统计</span>
-                            <button class="btn btn-outline-primary btn-sm" onclick="refreshTab('users')">
-                                <i class="bi bi-arrow-clockwise"></i> 刷新数据
-                            </button>
+                        <div class="alert alert-info" id="userStatsEmptyAlert">
+                            <i class="bi bi-info-circle me-2"></i>请点击上方的"刷新当前页面数据"按钮或下方的"刷新数据"按钮加载用户统计数据
                         </div>
-                            <div class="row mb-4">
+                        <div id="userStatsContent" style="display: none;">
+                            <div class="section-card">
+                                <div class="section-title d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-people"></i> 用户统计</span>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="refreshTab('users')">
+                                        <i class="bi bi-arrow-clockwise"></i> 刷新数据
+                                    </button>
+                                </div>
+                                <div class="row mb-4">
                                 <div class="col-md-4">
                                     <div class="card bg-light">
                                         <div class="card-body text-center">
@@ -391,6 +419,7 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
         </div>
     </div>
@@ -401,8 +430,8 @@
         let adClickChart, userRegChart, adPieChart;
         let currentAds = [];
         
-        // 记录已加载的标签页数据状态
-        let loadedTabs = {};
+        // 记录当前活动标签页
+        let currentTab = 'dashboard';
         
         // 显示指定标签页
         function showTab(tabId) {
@@ -410,30 +439,32 @@
             document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             event.target.closest('li').classList.add('active');
-            
-            // 加载对应数据（仅首次加载）
-            if (tabId === 'ad-stats' && !loadedTabs['ad-stats']) {
+            currentTab = tabId;
+        }
+        
+        // 全局刷新按钮 - 根据当前标签页刷新对应数据
+        function refreshAllData() {
+            if (currentTab === 'dashboard') {
+                loadDashboard();
+            } else if (currentTab === 'ad-stats') {
                 loadAdStats();
-                loadedTabs['ad-stats'] = true;
-            }
-            if (tabId === 'users' && !loadedTabs['users']) {
+            } else if (currentTab === 'users') {
                 loadUserStats();
-                loadedTabs['users'] = true;
+            } else if (currentTab === 'ads') {
+                loadAds();
             }
         }
         
-        // 强制刷新数据（手动刷新按钮使用）
+        // 强制刷新数据（各页面内的刷新按钮使用）
         function refreshTab(tabId) {
             if (tabId === 'ad-stats') loadAdStats();
             if (tabId === 'users') loadUserStats();
         }
         
-        // 更新当前时间
+        // 显示静态时间（页面加载时）
         function updateTime() {
             document.getElementById('currentTime').textContent = new Date().toLocaleString('zh-CN');
         }
-        setInterval(updateTime, 1000);
-        updateTime();
         
         // 加载仪表盘数据
         async function loadDashboard() {
@@ -446,6 +477,10 @@
                     document.getElementById('todayUsers').textContent = data.today_users || 0;
                     document.getElementById('totalTests').textContent = data.total_tests || 0;
                     document.getElementById('totalAdClicks').textContent = data.total_ad_clicks || 0;
+                    
+                    // 显示统计区域，隐藏提示
+                    document.getElementById('dashboardEmptyAlert').style.display = 'none';
+                    document.getElementById('dashboardStats').style.display = 'flex';
                     
                     // 更新图表
                     updateCharts(data);
@@ -512,6 +547,10 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    // 显示内容区域，隐藏提示
+                    document.getElementById('adsEmptyAlert').style.display = 'none';
+                    document.getElementById('adsContent').style.display = 'block';
+                    
                     currentAds = data.ads || [];
                     renderAdForms();
                     renderAdPreview();
@@ -669,6 +708,10 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    // 显示内容区域，隐藏提示
+                    document.getElementById('adStatsEmptyAlert').style.display = 'none';
+                    document.getElementById('adStatsContent').style.display = 'flex';
+                    
                     // 填充统计表格
                     const table = document.getElementById('adStatsTable');
                     table.innerHTML = '';
@@ -739,6 +782,10 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    // 显示内容区域，隐藏提示
+                    document.getElementById('userStatsEmptyAlert').style.display = 'none';
+                    document.getElementById('userStatsContent').style.display = 'block';
+                    
                     document.getElementById('userTotal').textContent = data.total_users || 0;
                     document.getElementById('userToday').textContent = data.today_users || 0;
                     document.getElementById('testTotal').textContent = data.total_tests || 0;
@@ -775,10 +822,9 @@
             }
         }
         
-        // 页面加载时初始化
+        // 页面加载时只初始化时间，不加载任何数据
         document.addEventListener('DOMContentLoaded', function() {
-            loadDashboard();
-            loadAds();
+            updateTime();
         });
     </script>
 </body>
