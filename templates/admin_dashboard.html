@@ -188,16 +188,7 @@
                 <div class="main-content">
                     <!-- 仪表盘 -->
                     <div id="dashboard" class="tab-content active">
-                        <div class="section-card">
-                            <div class="section-title d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-speedometer2"></i> 数据概览</span>
-                                <span class="text-muted small">点击上方刷新按钮获取最新数据</span>
-                            </div>
-                            <div class="alert alert-info" id="dashboardEmptyAlert">
-                                <i class="bi bi-info-circle me-2"></i>请点击上方的"刷新当前页面数据"按钮加载数据
-                            </div>
-                        </div>
-                        <div class="row mb-4" id="dashboardStats" style="display: none;">
+                        <div class="row mb-4" id="dashboardStats">
                             <div class="col-md-3">
                                 <div class="stats-card">
                                     <div class="stats-icon bg-primary bg-opacity-10 text-primary">
@@ -259,7 +250,7 @@
                     <!-- 广告管理 -->
                     <div id="ads" class="tab-content">
                         <div class="alert alert-info" id="adsEmptyAlert">
-                            <i class="bi bi-info-circle me-2"></i>请点击上方的"刷新当前页面数据"按钮加载广告配置
+                            <i class="bi bi-info-circle me-2"></i>正在加载广告配置...
                         </div>
                         <div id="adsContent" style="display: none;">
                             <div class="section-card">
@@ -298,61 +289,63 @@
                     <!-- 广告统计 -->
                     <div id="ad-stats" class="tab-content">
                         <div class="alert alert-info" id="adStatsEmptyAlert">
-                            <i class="bi bi-info-circle me-2"></i>请点击上方的"刷新当前页面数据"按钮或下方的"刷新数据"按钮加载广告统计数据
+                            <i class="bi bi-info-circle me-2"></i>数据加载中...
                         </div>
-                        <div class="row" id="adStatsContent" style="display: none;">
-                            <div class="col-md-6">
-                                <div class="section-card">
-                                    <div class="section-title d-flex justify-content-between align-items-center">
-                                        <span><i class="bi bi-graph-up"></i> 各广告点击统计（30天）</span>
-                                        <button class="btn btn-outline-primary btn-sm" onclick="refreshTab('ad-stats')">
-                                            <i class="bi bi-arrow-clockwise"></i> 刷新数据
-                                        </button>
+                        <div id="adStatsContent" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="section-card">
+                                        <div class="section-title d-flex justify-content-between align-items-center">
+                                            <span><i class="bi bi-graph-up"></i> 各广告点击统计（30天）</span>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="refreshTab('ad-stats')">
+                                                <i class="bi bi-arrow-clockwise"></i> 刷新数据
+                                            </button>
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>广告名称</th>
+                                                        <th>点击次数</th>
+                                                        <th>占比</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="adStatsTable">
+                                                    <!-- 动态插入 -->
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>广告名称</th>
-                                                    <th>点击次数</th>
-                                                    <th>占比</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="adStatsTable">
-                                                <!-- 动态插入 -->
-                                            </tbody>
-                                        </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="section-card">
+                                        <div class="section-title">
+                                            <i class="bi bi-pie-chart"></i> 广告点击分布
+                                        </div>
+                                        <canvas id="adPieChart" class="chart-container"></canvas>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="section-card">
-                                    <div class="section-title">
-                                        <i class="bi bi-pie-chart"></i> 广告点击分布
-                                    </div>
-                                    <canvas id="adPieChart" class="chart-container"></canvas>
+                            
+                            <div class="section-card">
+                                <div class="section-title">
+                                    <i class="bi bi-clock-history"></i> 最近点击记录
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div class="section-card">
-                            <div class="section-title">
-                                <i class="bi bi-clock-history"></i> 最近点击记录
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>时间</th>
-                                            <th>广告名称</th>
-                                            <th>用户</th>
-                                            <th>IP</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="recentClicksTable">
-                                        <!-- 动态插入 -->
-                                    </tbody>
-                                </table>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>时间</th>
+                                                <th>广告名称</th>
+                                                <th>用户</th>
+                                                <th>IP</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recentClicksTable">
+                                            <!-- 动态插入 -->
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -360,7 +353,7 @@
                     <!-- 用户管理 -->
                     <div id="users" class="tab-content">
                         <div class="alert alert-info" id="userStatsEmptyAlert">
-                            <i class="bi bi-info-circle me-2"></i>请点击上方的"刷新当前页面数据"按钮或下方的"刷新数据"按钮加载用户统计数据
+                            <i class="bi bi-info-circle me-2"></i>正在加载用户统计数据...
                         </div>
                         <div id="userStatsContent" style="display: none;">
                             <div class="section-card">
@@ -440,6 +433,15 @@
             document.getElementById(tabId).classList.add('active');
             event.target.closest('li').classList.add('active');
             currentTab = tabId;
+            
+            // 首次进入标签页时加载数据
+            if (!loadedTabs[tabId]) {
+                if (tabId === 'dashboard') loadDashboard();
+                else if (tabId === 'ads') loadAds();
+                else if (tabId === 'ad-stats') loadAdStats();
+                else if (tabId === 'users') loadUserStats();
+                loadedTabs[tabId] = true;
+            }
         }
         
         // 全局刷新按钮 - 根据当前标签页刷新对应数据
@@ -477,10 +479,6 @@
                     document.getElementById('todayUsers').textContent = data.today_users || 0;
                     document.getElementById('totalTests').textContent = data.total_tests || 0;
                     document.getElementById('totalAdClicks').textContent = data.total_ad_clicks || 0;
-                    
-                    // 显示统计区域，隐藏提示
-                    document.getElementById('dashboardEmptyAlert').style.display = 'none';
-                    document.getElementById('dashboardStats').style.display = 'flex';
                     
                     // 更新图表
                     updateCharts(data);
@@ -710,7 +708,7 @@
                 if (response.ok) {
                     // 显示内容区域，隐藏提示
                     document.getElementById('adStatsEmptyAlert').style.display = 'none';
-                    document.getElementById('adStatsContent').style.display = 'flex';
+                    document.getElementById('adStatsContent').style.display = 'block';
                     
                     // 填充统计表格
                     const table = document.getElementById('adStatsTable');
@@ -822,9 +820,15 @@
             }
         }
         
-        // 页面加载时只初始化时间，不加载任何数据
+        // 记录已加载的标签页
+        let loadedTabs = {};
+        
+        // 页面加载时初始化时间并加载仪表盘数据
         document.addEventListener('DOMContentLoaded', function() {
             updateTime();
+            // 初始加载仪表盘数据
+            loadDashboard();
+            loadedTabs['dashboard'] = true;
         });
     </script>
 </body>
