@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - AI模型性能拨测系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f6fa;
+        }
+        .sidebar {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 20px 0;
+        }
+        .sidebar-brand {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+        .sidebar-menu li {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .sidebar-menu li:hover,
+        .sidebar-menu li.active {
+            background: rgba(255,255,255,0.1);
+        }
+        .sidebar-menu li i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        .main-content {
+            padding: 30px;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        .stats-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+        }
+        .stats-label {
+            color: #666;
+            font-size: 14px;
+        }
+        .section-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .ad-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .table th {
+            font-weight: 600;
+            background: #f8f9fa;
+        }
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 15px 30px;
+        }
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .logout-btn {
+            color: #dc3545;
+            cursor: pointer;
+        }
+        .badge-custom {
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-2 sidebar">
+                <div class="sidebar-brand">
+                    <h5 class="mb-0"><i class="bi bi-speedometer2"></i> 管理后台</h5>
+                    <small class="opacity-75">AI模型拨测系统</small>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="active" onclick="showTab('dashboard')">
+                        <i class="bi bi-grid"></i> 仪表盘
+                    </li>
+                    <li onclick="showTab('ads')">
+                        <i class="bi bi-badge-ad"></i> 广告管理
+                    </li>
+                    <li onclick="showTab('ad-stats')">
+                        <i class="bi bi-graph-up"></i> 广告统计
+                    </li>
+                    <li onclick="showTab('users')">
+                        <i class="bi bi-people"></i> 用户管理
+                    </li>
+                    <li class="logout-btn" onclick="logout()">
+                        <i class="bi bi-box-arrow-left"></i> 退出登录
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- 主内容区 -->
+            <div class="col-md-10">
+                <nav class="navbar">
+                    <span class="navbar-brand mb-0 h5">欢迎回来，管理员</span>
+                    <span class="text-muted" id="currentTime"></span>
+                </nav>
+                
+                <div class="main-content">
+                    <!-- 仪表盘 -->
+                    <div id="dashboard" class="tab-content active">
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="stats-card">
+                                    <div class="stats-icon bg-primary bg-opacity-10 text-primary">
+                                        <i class="bi bi-people-fill"></i>
+                                    </div>
+                                    <div class="stats-value" id="totalUsers">-</div>
+                                    <div class="stats-label">总用户数</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stats-card">
+                                    <div class="stats-icon bg-success bg-opacity-10 text-success">
+                                        <i class="bi bi-person-plus-fill"></i>
+                                    </div>
+                                    <div class="stats-value" id="todayUsers">-</div>
+                                    <div class="stats-label">今日新增</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stats-card">
+                                    <div class="stats-icon bg-warning bg-opacity-10 text-warning">
+                                        <i class="bi bi-clipboard-check-fill"></i>
+                                    </div>
+                                    <div class="stats-value" id="totalTests">-</div>
+                                    <div class="stats-label">总测试次数</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stats-card">
+                                    <div class="stats-icon bg-info bg-opacity-10 text-info">
+                                        <i class="bi bi-cursor-fill"></i>
+                                    </div>
+                                    <div class="stats-value" id="totalAdClicks">-</div>
+                                    <div class="stats-label">广告点击总数</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="section-card">
+                                    <div class="section-title">
+                                        <i class="bi bi-graph-up-arrow"></i> 近期广告点击趋势
+                                    </div>
+                                    <canvas id="adClickChart" class="chart-container"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="section-card">
+                                    <div class="section-title">
+                                        <i class="bi bi-person-plus"></i> 近期用户注册趋势
+                                    </div>
+                                    <canvas id="userRegChart" class="chart-container"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 广告管理 -->
+                    <div id="ads" class="tab-content">
+                        <div class="section-card">
+                            <div class="section-title d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-badge-ad"></i> 广告位管理</span>
+                                <button class="btn btn-primary btn-sm" onclick="addAdForm()">
+                                    <i class="bi bi-plus"></i> 添加广告
+                                </button>
+                            </div>
+                            
+                            <div id="adForms">
+                                <!-- 广告表单将动态插入这里 -->
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button class="btn btn-success" onclick="saveAds()">
+                                    <i class="bi bi-save"></i> 保存更改
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="section-card">
+                            <div class="section-title"><i class="bi bi-eye"></i> 广告位预览</div>
+                            <div id="adPreview">
+                                <!-- 广告预览将动态插入这里 -->
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-outline-primary" onclick="loadAds()">
+                                    <i class="bi bi-arrow-clockwise"></i> 刷新预览
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 广告统计 -->
+                    <div id="ad-stats" class="tab-content">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="section-card">
+                                    <div class="section-title">
+                                        <i class="bi bi-graph-up"></i> 各广告点击统计（30天）
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>广告名称</th>
+                                                    <th>点击次数</th>
+                                                    <th>占比</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="adStatsTable">
+                                                <!-- 动态插入 -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="section-card">
+                                    <div class="section-title">
+                                        <i class="bi bi-pie-chart"></i> 广告点击分布
+                                    </div>
+                                    <canvas id="adPieChart" class="chart-container"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-card">
+                            <div class="section-title">
+                                <i class="bi bi-clock-history"></i> 最近点击记录
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>时间</th>
+                                            <th>广告名称</th>
+                                            <th>用户</th>
+                                            <th>IP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentClicksTable">
+                                        <!-- 动态插入 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 用户管理 -->
+                    <div id="users" class="tab-content">
+                        <div class="section-card">
+                            <div class="section-title"><i class="bi bi-people"></i> 用户统计</div>
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h3 class="text-primary" id="userTotal">-</h3>
+                                            <p class="mb-0 text-muted">总用户数</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h3 class="text-success" id="userToday">-</h3>
+                                            <p class="mb-0 text-muted">今日新增</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h3 class="text-info" id="testTotal">-</h3>
+                                            <p class="mb-0 text-muted">总测试次数</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-card">
+                            <div class="section-title"><i class="bi bi-person-lines-fill"></i> 最近注册用户</div>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>邮箱</th>
+                                            <th>微信昵称</th>
+                                            <th>注册时间</th>
+                                            <th>最后登录</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentUsersTable">
+                                        <!-- 动态插入 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let adClickChart, userRegChart, adPieChart;
+        let currentAds = [];
+        
+        // 显示指定标签页
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.closest('li').classList.add('active');
+            
+            // 加载对应数据
+            if (tabId === 'ad-stats') loadAdStats();
+            if (tabId === 'users') loadUserStats();
+        }
+        
+        // 更新当前时间
+        function updateTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleString('zh-CN');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+        
+        // 加载仪表盘数据
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/admin/stats');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('totalUsers').textContent = data.total_users || 0;
+                    document.getElementById('todayUsers').textContent = data.today_users || 0;
+                    document.getElementById('totalTests').textContent = data.total_tests || 0;
+                    document.getElementById('totalAdClicks').textContent = data.total_ad_clicks || 0;
+                    
+                    // 更新图表
+                    updateCharts(data);
+                }
+            } catch (error) {
+                console.error('加载仪表盘数据失败:', error);
+            }
+        }
+        
+        // 更新图表
+        function updateCharts(data) {
+            // 广告点击趋势图
+            const adCtx = document.getElementById('adClickChart').getContext('2d');
+            if (adClickChart) adClickChart.destroy();
+            
+            adClickChart = new Chart(adCtx, {
+                type: 'line',
+                data: {
+                    labels: (data.ad_daily_stats || []).slice(-7).map(s => s.date),
+                    datasets: [{
+                        label: '点击次数',
+                        data: (data.ad_daily_stats || []).slice(-7).map(s => s.count),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            
+            // 用户注册趋势图
+            const userCtx = document.getElementById('userRegChart').getContext('2d');
+            if (userRegChart) userRegChart.destroy();
+            
+            userRegChart = new Chart(userCtx, {
+                type: 'bar',
+                data: {
+                    labels: (data.user_daily_stats || []).slice(-7).map(s => s.date),
+                    datasets: [{
+                        label: '注册人数',
+                        data: (data.user_daily_stats || []).slice(-7).map(s => s.count),
+                        backgroundColor: '#764ba2'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+        
+        // 加载广告列表
+        async function loadAds() {
+            try {
+                const response = await fetch('/api/admin/ads');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentAds = data.ads || [];
+                    renderAdForms();
+                    renderAdPreview();
+                }
+            } catch (error) {
+                console.error('加载广告失败:', error);
+            }
+        }
+        
+        // 渲染广告表单
+        function renderAdForms() {
+            const container = document.getElementById('adForms');
+            container.innerHTML = '';
+            
+            currentAds.forEach((ad, index) => {
+                const div = document.createElement('div');
+                div.className = 'ad-form';
+                div.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">广告 #${index + 1}</h6>
+                        <button class="btn btn-danger btn-sm" onclick="removeAd(${index})">
+                            <i class="bi bi-trash"></i> 删除
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">图标类名</label>
+                            <input type="text" class="form-control" id="ad-${index}-icon" value="${ad.icon || ''}">
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">名称</label>
+                            <input type="text" class="form-control" id="ad-${index}-name" value="${ad.name || ''}">
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">链接</label>
+                            <input type="text" class="form-control" id="ad-${index}-url" value="${ad.url || ''}">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">描述</label>
+                            <input type="text" class="form-control" id="ad-${index}-desc" value="${ad.desc || ''}">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">标签</label>
+                            <input type="text" class="form-control" id="ad-${index}-badge" value="${ad.badge || ''}">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">标签颜色</label>
+                            <select class="form-select" id="ad-${index}-badge_color">
+                                <option value="" ${!ad.badge_color ? 'selected' : ''}>无</option>
+                                <option value="primary" ${ad.badge_color === 'primary' ? 'selected' : ''}>蓝色</option>
+                                <option value="success" ${ad.badge_color === 'success' ? 'selected' : ''}>绿色</option>
+                                <option value="danger" ${ad.badge_color === 'danger' ? 'selected' : ''}>红色</option>
+                                <option value="warning" ${ad.badge_color === 'warning' ? 'selected' : ''}>黄色</option>
+                                <option value="info" ${ad.badge_color === 'info' ? 'selected' : ''}>青色</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        // 渲染广告预览
+        function renderAdPreview() {
+            const container = document.getElementById('adPreview');
+            container.innerHTML = '<h6 class="mb-3">侧边栏效果预览：</h6>';
+            
+            const list = document.createElement('div');
+            list.className = 'list-group';
+            list.style.maxWidth = '350px';
+            
+            currentAds.forEach(ad => {
+                const badgeHtml = ad.badge ? `<span class="badge bg-${ad.badge_color || 'primary'}">${ad.badge}</span>` : '';
+                const item = document.createElement('a');
+                item.className = 'list-group-item list-group-item-action d-flex align-items-center py-3';
+                item.href = ad.url || '#';
+                item.target = '_blank';
+                item.innerHTML = `
+                    <i class="bi ${ad.icon || 'bi-box'} fs-4 text-primary me-3"></i>
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center">
+                            <strong>${ad.name || '未命名'}</strong>
+                            ${badgeHtml}
+                        </div>
+                        <small class="text-muted">${ad.desc || ''}</small>
+                    </div>
+                    <i class="bi bi-box-arrow-up-right text-muted"></i>
+                `;
+                list.appendChild(item);
+            });
+            
+            container.appendChild(list);
+        }
+        
+        // 添加广告表单
+        function addAdForm() {
+            currentAds.push({
+                icon: 'bi-box',
+                name: '新广告',
+                desc: '广告描述',
+                url: 'https://',
+                badge: '',
+                badge_color: ''
+            });
+            renderAdForms();
+        }
+        
+        // 删除广告
+        function removeAd(index) {
+            if (confirm('确定要删除这个广告吗？')) {
+                currentAds.splice(index, 1);
+                renderAdForms();
+            }
+        }
+        
+        // 保存广告
+        async function saveAds() {
+            // 收集表单数据
+            const ads = [];
+            for (let i = 0; i < currentAds.length; i++) {
+                ads.push({
+                    icon: document.getElementById(`ad-${i}-icon`).value,
+                    name: document.getElementById(`ad-${i}-name`).value,
+                    desc: document.getElementById(`ad-${i}-desc`).value,
+                    url: document.getElementById(`ad-${i}-url`).value,
+                    badge: document.getElementById(`ad-${i}-badge`).value,
+                    badge_color: document.getElementById(`ad-${i}-badge_color`).value
+                });
+            }
+            
+            try {
+                const response = await fetch('/api/admin/ads', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ads })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('保存成功！');
+                    loadAds();
+                } else {
+                    alert(data.error || '保存失败');
+                }
+            } catch (error) {
+                alert('网络错误');
+            }
+        }
+        
+        // 加载广告统计
+        async function loadAdStats() {
+            try {
+                const response = await fetch('/api/admin/ad-stats');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 填充统计表格
+                    const table = document.getElementById('adStatsTable');
+                    table.innerHTML = '';
+                    
+                    let totalClicks = data.stats.reduce((sum, s) => sum + s.click_count, 0);
+                    
+                    data.stats.forEach(stat => {
+                        const percentage = totalClicks > 0 ? ((stat.click_count / totalClicks) * 100).toFixed(1) : 0;
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${stat.ad_name}</td>
+                            <td><strong>${stat.click_count}</strong></td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" style="width: ${percentage}%">${percentage}%</div>
+                                </div>
+                            </td>
+                        `;
+                        table.appendChild(row);
+                    });
+                    
+                    // 饼图
+                    const ctx = document.getElementById('adPieChart').getContext('2d');
+                    if (adPieChart) adPieChart.destroy();
+                    
+                    adPieChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: data.stats.map(s => s.ad_name),
+                            datasets: [{
+                                data: data.stats.map(s => s.click_count),
+                                backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            }
+                        }
+                    });
+                    
+                    // 最近点击记录
+                    const recentTable = document.getElementById('recentClicksTable');
+                    recentTable.innerHTML = '';
+                    data.recent_clicks.forEach(click => {
+                        const user = click.email || click.wechat_nickname || '匿名用户';
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${click.clicked_at_formatted}</td>
+                            <td>${click.ad_name}</td>
+                            <td>${user}</td>
+                            <td><code>${click.ip || '-'}</code></td>
+                        `;
+                        recentTable.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('加载广告统计失败:', error);
+            }
+        }
+        
+        // 加载用户统计
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/admin/user-stats');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('userTotal').textContent = data.total_users || 0;
+                    document.getElementById('userToday').textContent = data.today_users || 0;
+                    document.getElementById('testTotal').textContent = data.total_tests || 0;
+                    
+                    // 最近注册用户
+                    const table = document.getElementById('recentUsersTable');
+                    table.innerHTML = '';
+                    data.recent_users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.id}</td>
+                            <td>${user.email || '-'}</td>
+                            <td>${user.wechat_nickname || '-'}</td>
+                            <td>${user.created_at_formatted}</td>
+                            <td>${user.last_login_formatted || '未登录'}</td>
+                        `;
+                        table.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('加载用户统计失败:', error);
+            }
+        }
+        
+        // 退出登录
+        async function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                try {
+                    await fetch('/api/admin/logout', { method: 'POST' });
+                    window.location.href = '/admin/login';
+                } catch (error) {
+                    console.error('退出失败:', error);
+                }
+            }
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard();
+            loadAds();
+        });
+    </script>
+</body>
+</html>

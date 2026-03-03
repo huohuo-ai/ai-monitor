@@ -91,6 +91,30 @@ class Database:
                 )
             ''')
             
+            # 管理员表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS admins (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    last_login INTEGER
+                )
+            ''')
+            
+            # 广告点击记录表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ad_clicks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ad_index INTEGER NOT NULL,
+                    ad_name TEXT NOT NULL,
+                    ip TEXT,
+                    user_id INTEGER,
+                    clicked_at INTEGER NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
             # 清理旧表（如果存在）
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
             if cursor.fetchone():
@@ -363,6 +387,183 @@ class Database:
             cursor.execute('''
                 DELETE FROM share_tokens WHERE expires_at IS NOT NULL AND expires_at < ?
             ''', (now,))
+    
+    # ============ 管理员相关 ============
+    
+    def create_admin(self, username, password_hash):
+        """创建管理员账号"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            now = int(time.time())
+            try:
+                cursor.execute('''
+                    INSERT INTO admins (username, password_hash, created_at)
+                    VALUES (?, ?, ?)
+                ''', (username, password_hash, now))
+                return cursor.lastrowid
+            except sqlite3.IntegrityError:
+                return None
+    
+    def get_admin_by_username(self, username):
+        """通过用户名获取管理员"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM admins WHERE username = ?', (username,))
+            row = cursor.fetchone()
+            if row:
+                return dict(row)
+            return None
+    
+    def update_admin_last_login(self, admin_id):
+        """更新管理员最后登录时间"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE admins SET last_login = ? WHERE id = ?
+            ''', (int(time.time()), admin_id))
+    
+    def get_admin_stats(self):
+        """获取管理员仪表盘统计数据"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            stats = {}
+            
+            # 总用户数
+            cursor.execute('SELECT COUNT(*) as count FROM users')
+            stats['total_users'] = cursor.fetchone()['count']
+            
+            # 今日注册用户数
+            today_start = int(datetime.now().replace(hour=0, minute=0, second=0).timestamp())
+            cursor.execute('SELECT COUNT(*) as count FROM users WHERE created_at >= ?', (today_start,))
+            stats['today_users'] = cursor.fetchone()['count']
+            
+            # 总测试次数
+            cursor.execute('SELECT COUNT(*) as count FROM test_records')
+            stats['total_tests'] = cursor.fetchone()['count']
+            
+            # 今日测试次数
+            cursor.execute('SELECT COUNT(*) as count FROM test_records WHERE created_at >= ?', (today_start,))
+            stats['today_tests'] = cursor.fetchone()['count']
+            
+            # 总广告点击数
+            cursor.execute('SELECT COUNT(*) as count FROM ad_clicks')
+            stats['total_ad_clicks'] = cursor.fetchone()['count']
+            
+            # 今日广告点击数
+            cursor.execute('SELECT COUNT(*) as count FROM ad_clicks WHERE clicked_at >= ?', (today_start,))
+            stats['today_ad_clicks'] = cursor.fetchone()['count']
+            
+            return stats
+    
+    # ============ 广告点击相关 ============
+    
+    def record_ad_click(self, ad_index, ad_name, ip=None, user_id=None):
+        """记录广告点击"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            now = int(time.time())
+            cursor.execute('''
+                INSERT INTO ad_clicks (ad_index, ad_name, ip, user_id, clicked_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (ad_index, ad_name, ip, user_id, now))
+            return cursor.lastrowid
+    
+    def get_ad_click_stats(self, days=30):
+        """获取广告点击统计（按广告分组）"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            since = int((datetime.now() - timedelta(days=days)).timestamp())
+            
+            cursor.execute('''
+                SELECT ad_index, ad_name, COUNT(*) as click_count
+                FROM ad_clicks
+                WHERE clicked_at >= ?
+                GROUP BY ad_index, ad_name
+                ORDER BY ad_index
+            ''', (since,))
+            
+            return [dict(row) for row in cursor.fetchall()]
+    
+    def get_ad_click_daily_stats(self, days=30):
+        """获取广告点击统计（按日期分组）"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            since = int((datetime.now() - timedelta(days=days)).timestamp())
+            
+            cursor.execute('''
+                SELECT date(clicked_at, 'unixepoch', 'localtime') as date, COUNT(*) as count
+                FROM ad_clicks
+                WHERE clicked_at >= ?
+                GROUP BY date(clicked_at, 'unixepoch', 'localtime')
+                ORDER BY date DESC
+            ''', (since,))
+            
+            return [dict(row) for row in cursor.fetchall()]
+    
+    def get_recent_ad_clicks(self, limit=50):
+        """获取最近的广告点击记录"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT ac.*, u.email, u.wechat_nickname
+                FROM ad_clicks ac
+                LEFT JOIN users u ON ac.user_id = u.id
+                ORDER BY ac.clicked_at DESC
+                LIMIT ?
+            ''', (limit,))
+            
+            rows = cursor.fetchall()
+            results = []
+            for row in rows:
+                record = dict(row)
+                record['clicked_at_formatted'] = datetime.fromtimestamp(record['clicked_at']).strftime('%Y-%m-%d %H:%M:%S')
+                results.append(record)
+            return results
+    
+    def get_user_stats(self, days=30):
+        """获取用户注册统计"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            since = int((datetime.now() - timedelta(days=days)).timestamp())
+            
+            # 每日注册用户统计
+            cursor.execute('''
+                SELECT date(created_at, 'unixepoch', 'localtime') as date, COUNT(*) as count
+                FROM users
+                WHERE created_at >= ?
+                GROUP BY date(created_at, 'unixepoch', 'localtime')
+                ORDER BY date DESC
+            ''', (since,))
+            daily_registrations = [dict(row) for row in cursor.fetchall()]
+            
+            # 每日登录统计
+            cursor.execute('''
+                SELECT date(last_login, 'unixepoch', 'localtime') as date, COUNT(*) as count
+                FROM users
+                WHERE last_login >= ?
+                GROUP BY date(last_login, 'unixepoch', 'localtime')
+                ORDER BY date DESC
+            ''', (since,))
+            daily_logins = [dict(row) for row in cursor.fetchall()]
+            
+            # 最近的注册用户
+            cursor.execute('''
+                SELECT * FROM users
+                ORDER BY created_at DESC
+                LIMIT 20
+            ''')
+            recent_users = []
+            for row in cursor.fetchall():
+                user = dict(row)
+                user['created_at_formatted'] = datetime.fromtimestamp(user['created_at']).strftime('%Y-%m-%d %H:%M:%S')
+                user['last_login_formatted'] = datetime.fromtimestamp(user['last_login']).strftime('%Y-%m-%d %H:%M:%S') if user['last_login'] else None
+                recent_users.append(user)
+            
+            return {
+                'daily_registrations': daily_registrations,
+                'daily_logins': daily_logins,
+                'recent_users': recent_users
+            }
 
 # 全局数据库实例
 db = Database()

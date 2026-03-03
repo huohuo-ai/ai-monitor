@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect
 import secrets
 import time
 import json
@@ -8,9 +8,10 @@ import re
 
 from database import db
 from email_service import send_verification_email
-from config import AD_CONFIG, WECHAT_CONFIG, WECHAT_OPEN_CONFIG, ENABLE_WECHAT_LOGIN
+from config import AD_CONFIG, WECHAT_CONFIG, WECHAT_OPEN_CONFIG, ENABLE_WECHAT_LOGIN, ADMIN_USERNAME, ADMIN_PASSWORD_HASH
 import hashlib
 import urllib.parse
+import os
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -601,6 +602,170 @@ def get_shared_result(share_token):
         'success': True,
         'data': result
     })
+
+# ============ 管理员验证装饰器 ============
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_logged_in' not in session:
+            return jsonify({'error': '请先登录', 'code': 401}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ============ 后台管理页面路由 ============
+
+@app.route('/admin/login')
+def admin_login_page():
+    """管理员登录页面"""
+    return render_template('admin_login.html')
+
+@app.route('/admin/dashboard')
+def admin_dashboard_page():
+    """管理后台仪表盘页面"""
+    if 'admin_logged_in' not in session:
+        return redirect('/admin/login')
+    return render_template('admin_dashboard.html')
+
+# ============ 后台管理 API ============
+
+@app.route('/api/admin/login', methods=['POST'])
+def admin_login():
+    """管理员登录"""
+    data = request.json
+    username = data.get('username', '')
+    password = data.get('password', '')
+    
+    if not username or not password:
+        return jsonify({'error': '用户名和密码不能为空'}), 400
+    
+    # 验证密码
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    if username == ADMIN_USERNAME and password_hash == ADMIN_PASSWORD_HASH:
+        session['admin_logged_in'] = True
+        session['admin_username'] = username
+        return jsonify({'message': '登录成功'})
+    else:
+        return jsonify({'error': '用户名或密码错误'}), 401
+
+@app.route('/api/admin/logout', methods=['POST'])
+def admin_logout():
+    """管理员退出登录"""
+    session.pop('admin_logged_in', None)
+    session.pop('admin_username', None)
+    return jsonify({'message': '退出成功'})
+
+@app.route('/api/admin/stats', methods=['GET'])
+@admin_required
+def admin_stats():
+    """获取管理员仪表盘统计数据"""
+    # 获取基础统计
+    stats = db.get_admin_stats()
+    
+    # 获取广告点击日统计
+    stats['ad_daily_stats'] = db.get_ad_click_daily_stats(30)
+    
+    # 获取用户注册日统计
+    user_stats = db.get_user_stats(30)
+    stats['user_daily_stats'] = user_stats['daily_registrations']
+    
+    return jsonify(stats)
+
+@app.route('/api/admin/ads', methods=['GET'])
+@admin_required
+def admin_get_ads():
+    """获取广告配置"""
+    return jsonify({
+        'ads': AD_CONFIG.get('ads', []),
+        'enabled': AD_CONFIG.get('enabled', True),
+        'title': AD_CONFIG.get('title', '推荐服务')
+    })
+
+@app.route('/api/admin/ads', methods=['POST'])
+@admin_required
+def admin_update_ads():
+    """更新广告配置"""
+    data = request.json
+    ads = data.get('ads', [])
+    
+    # 更新内存中的配置
+    AD_CONFIG['ads'] = ads
+    
+    # 更新配置文件
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 构建新的广告配置字符串
+        ads_str = '[\n'
+        for ad in ads:
+            ads_str += '        {\n'
+            for key, value in ad.items():
+                if value is None:
+                    ads_str += f"            '{key}': None,\n"
+                elif isinstance(value, str):
+                    ads_str += f"            '{key}': '{value}',\n"
+                else:
+                    ads_str += f"            '{key}': {value},\n"
+            ads_str = ads_str.rstrip(',\n') + '\n'
+            ads_str += '        },\n'
+        ads_str = ads_str.rstrip(',\n') + '\n    ]'
+        
+        # 使用正则替换广告列表
+        import re
+        pattern = r"('ads':\s*\[)[\s\S]*?(\])"
+        replacement = f"'ads': {ads_str}"
+        content = re.sub(pattern, replacement, content)
+        
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        return jsonify({'message': '广告配置已更新'})
+    except Exception as e:
+        print(f'更新配置文件失败: {e}')
+        # 即使文件写入失败，内存配置已更新
+        return jsonify({'message': '广告配置已更新（内存）'})
+
+@app.route('/api/admin/ad-stats', methods=['GET'])
+@admin_required
+def admin_ad_stats():
+    """获取广告点击统计"""
+    return jsonify({
+        'stats': db.get_ad_click_stats(30),
+        'recent_clicks': db.get_recent_ad_clicks(50)
+    })
+
+@app.route('/api/admin/user-stats', methods=['GET'])
+@admin_required
+def admin_user_stats():
+    """获取用户统计"""
+    stats = db.get_admin_stats()
+    user_detail = db.get_user_stats(30)
+    
+    return jsonify({
+        'total_users': stats['total_users'],
+        'today_users': stats['today_users'],
+        'total_tests': stats['total_tests'],
+        'recent_users': user_detail['recent_users']
+    })
+
+@app.route('/api/ad/click', methods=['POST'])
+def ad_click():
+    """记录广告点击"""
+    data = request.json
+    ad_index = data.get('ad_index')
+    ad_name = data.get('ad_name')
+    
+    if ad_index is None or not ad_name:
+        return jsonify({'error': '参数错误'}), 400
+    
+    user_id = session.get('user_id')
+    ip = request.remote_addr
+    
+    db.record_ad_click(ad_index, ad_name, ip, user_id)
+    return jsonify({'success': True})
 
 # ============ 错误处理 ============
 

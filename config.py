@@ -1,6 +1,11 @@
 import os
+import hashlib
 
 # 系统配置
+
+# 管理员配置
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'wanghq')
+ADMIN_PASSWORD_HASH = os.getenv('ADMIN_PASSWORD_HASH', hashlib.sha256('wanghq8273080'.encode()).hexdigest())
 
 # 微信登录功能总开关（通过环境变量控制）
 # 设置为 true/1/yes 启用，其他值禁用
@@ -50,7 +55,7 @@ AD_CONFIG = {
     'ads': [
         {
             'icon': 'bi-robot',
-            'name': 'DeepSeek API',
+            'name': '网宿 MaaS AI网关',
             'desc': 'MaaS平台，性价比之选',
             'url': 'https://www.wangsu.com/product/352',
             'badge': '热门',
@@ -58,25 +63,25 @@ AD_CONFIG = {
         },
         {
             'icon': 'bi-lightning-charge',
-            'name': 'Kimi API',
-            'desc': 'Moonshot AI，长文本专家',
-            'url': 'https://platform.moonshot.cn/',
+            'name': 'AI 应用安全防护',
+            'desc': ' WAAP一体化安全加速防护方案',
+            'url': 'https://online.wangsu.com/product/waf',
             'badge': None,
             'badge_color': None
         },
         {
             'icon': 'bi-globe',
-            'name': 'OpenRouter',
-            'desc': '一站式接入多种大模型',
-            'url': 'https://openrouter.ai/',
+            'name': '全球骨干网络加速',
+            'desc': '大模型全球加速解决方案',
+            'url': 'https://online.wangsu.com/product/ai-model',
             'badge': '聚合',
             'badge_color': 'info'
         },
         {
             'icon': 'bi-cpu',
-            'name': 'SiliconFlow',
-            'desc': '开源模型推理服务',
-            'url': 'https://siliconflow.cn/',
+            'name': ' Seedance2.0服务',
+            'desc': '获取Seedance2.0服务折扣',
+            'url': 'https://www.seeddanceapi.com/zh',
             'badge': None,
             'badge_color': None
         }

@@ -7,7 +7,7 @@
     <div class="card-body p-0">
         <div class="ad-list">
             {% for ad in ad_config.ads %}
-            <a href="{{ ad.url }}" target="_blank" rel="noopener" class="ad-item">
+            <a href="{{ ad.url }}" target="_blank" rel="noopener" class="ad-item" data-ad-index="{{ loop.index0 }}" data-ad-name="{{ ad.name }}" onclick="trackAdClick(this)">
                 <div class="ad-icon">
                     <i class="bi {{ ad.icon }}"></i>
                 </div>
@@ -25,6 +25,24 @@
                 </div>
             </a>
             {% endfor %}
+            
+            <script>
+                // 广告点击追踪
+                function trackAdClick(element) {
+                    const adIndex = element.getAttribute('data-ad-index');
+                    const adName = element.getAttribute('data-ad-name');
+                    
+                    // 发送点击统计（不等待响应）
+                    fetch('/api/ad/click', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ad_index: parseInt(adIndex),
+                            ad_name: adName
+                        })
+                    }).catch(err => console.error('广告点击统计失败:', err));
+                }
+            </script>
         </div>
     </div>
     <div class="card-footer ad-footer">
