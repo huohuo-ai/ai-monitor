@@ -41,6 +41,13 @@
         }
         .main-content {
             padding: 30px;
+            height: calc(100vh - 70px);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .main-wrapper {
+            height: 100vh;
+            overflow: hidden;
         }
         .stats-card {
             background: white;
@@ -104,6 +111,21 @@
             height: 300px;
             position: relative;
         }
+        /* 自定义滚动条样式 */
+        .main-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .main-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .main-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .main-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
         .tab-content {
             display: none;
         }
@@ -125,7 +147,7 @@
     <div class="container-fluid">
         <div class="row">
             <!-- 侧边栏 -->
-            <div class="col-md-2 sidebar">
+            <div class="col-md-2 sidebar" style="height: 100vh; position: sticky; top: 0;">
                 <div class="sidebar-brand">
                     <h5 class="mb-0"><i class="bi bi-speedometer2"></i> 管理后台</h5>
                     <small class="opacity-75">AI模型拨测系统</small>
@@ -150,7 +172,7 @@
             </div>
             
             <!-- 主内容区 -->
-            <div class="col-md-10">
+            <div class="col-md-10 main-wrapper">
                 <nav class="navbar">
                     <span class="navbar-brand mb-0 h5">欢迎回来，管理员</span>
                     <span class="text-muted" id="currentTime"></span>
@@ -257,8 +279,11 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="section-card">
-                                    <div class="section-title">
-                                        <i class="bi bi-graph-up"></i> 各广告点击统计（30天）
+                                    <div class="section-title d-flex justify-content-between align-items-center">
+                                        <span><i class="bi bi-graph-up"></i> 各广告点击统计（30天）</span>
+                                        <button class="btn btn-outline-primary btn-sm" onclick="refreshTab('ad-stats')">
+                                            <i class="bi bi-arrow-clockwise"></i> 刷新数据
+                                        </button>
                                     </div>
                                     <div class="table-responsive">
                                         <table class="table table-hover">
@@ -311,7 +336,12 @@
                     <!-- 用户管理 -->
                     <div id="users" class="tab-content">
                         <div class="section-card">
-                            <div class="section-title"><i class="bi bi-people"></i> 用户统计</div>
+                            <div class="section-title d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-people"></i> 用户统计</span>
+                            <button class="btn btn-outline-primary btn-sm" onclick="refreshTab('users')">
+                                <i class="bi bi-arrow-clockwise"></i> 刷新数据
+                            </button>
+                        </div>
                             <div class="row mb-4">
                                 <div class="col-md-4">
                                     <div class="card bg-light">
@@ -371,6 +401,9 @@
         let adClickChart, userRegChart, adPieChart;
         let currentAds = [];
         
+        // 记录已加载的标签页数据状态
+        let loadedTabs = {};
+        
         // 显示指定标签页
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -378,7 +411,19 @@
             document.getElementById(tabId).classList.add('active');
             event.target.closest('li').classList.add('active');
             
-            // 加载对应数据
+            // 加载对应数据（仅首次加载）
+            if (tabId === 'ad-stats' && !loadedTabs['ad-stats']) {
+                loadAdStats();
+                loadedTabs['ad-stats'] = true;
+            }
+            if (tabId === 'users' && !loadedTabs['users']) {
+                loadUserStats();
+                loadedTabs['users'] = true;
+            }
+        }
+        
+        // 强制刷新数据（手动刷新按钮使用）
+        function refreshTab(tabId) {
             if (tabId === 'ad-stats') loadAdStats();
             if (tabId === 'users') loadUserStats();
         }
