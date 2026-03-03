@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect
+from flask import Flask, render_template, request, jsonify, session, redirect, send_from_directory
 import secrets
 import time
 import json
@@ -73,6 +73,11 @@ def get_config():
         'ad_enabled': AD_CONFIG.get('enabled', False)
     })
 
+
+@app.route('/favicon.ico')
+def favicon():
+    """返回网站图标"""
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/png')
 
 @app.route('/MP_verify_AMrCKwIdXXvYtY53.txt')
 def mp_verify():
