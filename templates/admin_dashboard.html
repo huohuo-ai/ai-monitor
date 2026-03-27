@@ -684,6 +684,7 @@
                 badge_color: ''
             });
             renderAdForms();
+            renderAdPreview();
         }
         
         // 删除广告
@@ -691,6 +692,7 @@
             if (confirm('确定要删除这个广告吗？')) {
                 currentAds.splice(index, 1);
                 renderAdForms();
+                renderAdPreview();
             }
         }
         

@@ -694,42 +694,79 @@ def admin_update_ads():
     data = request.json
     ads = data.get('ads', [])
     
+    print(f"[DEBUG] 接收到广告配置更新请求，广告数量: {len(ads)}")
+    print(f"[DEBUG] 广告数据: {ads}")
+    
     # 更新内存中的配置
     AD_CONFIG['ads'] = ads
     
-    # 更新配置文件
+    # 将内存配置同步到文件
     try:
         config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+        
         with open(config_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+            lines = f.readlines()
         
-        # 构建新的广告配置字符串
-        ads_str = '[\n'
-        for ad in ads:
-            ads_str += '        {\n'
-            for key, value in ad.items():
-                if value is None:
-                    ads_str += f"            '{key}': None,\n"
-                elif isinstance(value, str):
-                    ads_str += f"            '{key}': '{value}',\n"
-                else:
-                    ads_str += f"            '{key}': {value},\n"
-            ads_str = ads_str.rstrip(',\n') + '\n'
-            ads_str += '        },\n'
-        ads_str = ads_str.rstrip(',\n') + '\n    ]'
+        # 找到 AD_CONFIG 的开始和结束
+        new_lines = []
+        in_ads = False
+        ads_indent = None
         
-        # 使用正则替换广告列表
-        import re
-        pattern = r"('ads':\s*\[)[\s\S]*?(\])"
-        replacement = f"'ads': {ads_str}"
-        content = re.sub(pattern, replacement, content)
+        for line in lines:
+            # 检测是否进入 ads 列表
+            if '"ads":' in line or "'ads':" in line:
+                in_ads = True
+                # 获取缩进
+                ads_indent = len(line) - len(line.lstrip())
+                new_lines.append(line)
+                
+                # 写入新的广告配置
+                new_lines.append('    [\n')
+                for i, ad in enumerate(ads):
+                    new_lines.append('        {\n')
+                    items = []
+                    for key, value in ad.items():
+                        if value is None:
+                            items.append(f'            "{key}": None')
+                        elif isinstance(value, str):
+                            escaped_value = value.replace('\\\\', '\\\\\\\\').replace('"', '\\"')
+                            items.append(f'            "{key}": "{escaped_value}"')
+                        elif isinstance(value, bool):
+                            items.append(f'            "{key}": {str(value)}')
+                        else:
+                            items.append(f'            "{key}": {value}')
+                    new_lines.append(',\n'.join(items))
+                    new_lines.append('\n        }')
+                    if i < len(ads) - 1:
+                        new_lines.append(',')
+                    new_lines.append('\n')
+                new_lines.append('    ]')
+                continue
+            
+            # 如果在 ads 列表中，检测列表结束
+            if in_ads:
+                # 检测列表结束（遇到 ] 符号）
+                stripped = line.strip()
+                if stripped == ']' or stripped.startswith(']'):
+                    in_ads = False
+                    # 保留列表后的逗号或其他字符
+                    remaining = stripped[1:].strip()
+                    if remaining:
+                        new_lines.append('    ]' + remaining + '\n')
+                    continue
+                # 跳过原有的广告配置行
+                continue
+            
+            new_lines.append(line)
         
         with open(config_path, 'w', encoding='utf-8') as f:
-            f.write(content)
+            f.writelines(new_lines)
         
         return jsonify({'message': '广告配置已更新'})
     except Exception as e:
         print(f'更新配置文件失败: {e}')
+        import traceback
+        traceback.print_exc()
         # 即使文件写入失败，内存配置已更新
         return jsonify({'message': '广告配置已更新（内存）'})
 
@@ -765,6 +802,17 @@ def ad_click():
     
     if ad_index is None or not ad_name:
         return jsonify({'error': '参数错误'}), 400
+    
+    # 验证 ad_name 是否在配置的广告列表中（防止脏数据）
+    valid_ad_names = {ad['name'] for ad in AD_CONFIG.get('ads', [])}
+    if ad_name not in valid_ad_names:
+        print(f"[WARN] 非法广告点击被拒绝: ad_name='{ad_name}', ip={request.remote_addr}")
+        return jsonify({'error': '非法广告名称'}), 400
+    
+    # 验证 ad_index 是否合法
+    if not isinstance(ad_index, int) or ad_index < 0 or ad_index >= len(AD_CONFIG.get('ads', [])):
+        print(f"[WARN] 非法广告索引被拒绝: ad_index={ad_index}, ip={request.remote_addr}")
+        return jsonify({'error': '非法广告索引'}), 400
     
     user_id = session.get('user_id')
     ip = request.remote_addr
